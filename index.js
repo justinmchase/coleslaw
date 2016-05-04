@@ -9,10 +9,13 @@ var semantics = grammar.extendSemantics(es5.semantics)
 
 semantics.extendAttribute('modifiedSource', {
     ModelDeclaration: (model, name, curlyOpen, members, curlyClose) => {
-        return `var ${name.asES5} = function() { ${members.asES5} }`
+        return `var ${name.asES5} = function () { ${members.asES5} }`
     },
     FieldDeclaration: (field, name, sc) => {
-        return `this.${name.asES5} = {}`
+        return `this.${name.asES5} = {
+            type: 'field',
+            name: '${name.asES5}'
+        }`
     }
 })
 

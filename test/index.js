@@ -7,6 +7,10 @@ describe('coleslaw', () => {
     
     var root = __dirname + '/'
     
+    // The .cls files in the exmaples directory
+    // are compiled into javascript and then
+    // eval'd as tests. 
+    
     function addTest(p) {
         it(path.basename(p, '.cls'), (done) => {
             coleslaw.compile(p, (err, code) => {
