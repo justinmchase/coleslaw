@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/justinmchase/coleslawjs/issues"
   },
-  "homepage": "https://github.com/justinmchase/coleslawjs#readme"
+  "homepage": "https://github.com/justinmchase/coleslawjs#readme",
+  "dependencies": {
+    "async": "^1.5.2"
+  }
 }
