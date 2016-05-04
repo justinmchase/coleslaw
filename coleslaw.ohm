@@ -2,14 +2,14 @@ Coleslaw <: ES5 {
 
     model = "model"
     field = "field"
-    validate = "validate"
-    keyword += model | field | validate
+    // validate = "validate"
+    keyword += model | field
     
     Declaration += ModelDeclaration
     
-    FieldDeclaration = field identifier #(sc)
+    FieldDeclaration = field identifier (":" nonemptyListOf<ValidationExpression, ",">)? #(sc)
     
-    ValidationDeclaration = validate identifier with identifier #(sc)
+    ValidationExpression = identifier
     
     // AccessDeclaration
     // AuthorizationDeclaration
@@ -17,8 +17,7 @@ Coleslaw <: ES5 {
     
     ModelDeclaration =
         model identifier "{" (
-            FieldDeclaration |
-            ValidationDeclaration
+            FieldDeclaration
         )* "}"
 
 }

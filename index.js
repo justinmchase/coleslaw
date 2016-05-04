@@ -11,11 +11,17 @@ semantics.extendAttribute('modifiedSource', {
     ModelDeclaration: (model, name, curlyOpen, members, curlyClose) => {
         return `var ${name.asES5} = function () { ${members.asES5} }`
     },
-    FieldDeclaration: (field, name, sc) => {
+    FieldDeclaration: (f, name, c, rules, sc) => {
         return `this.${name.asES5} = {
             type: 'field',
-            name: '${name.asES5}'
+            name: '${name.asES5}',
+            rules: {
+                validation: [${rules.asES5}]
+            }
         }`
+    },
+    ValidationExpression: (name) => {
+        return `'${name.asES5}'`
     }
 })
 
