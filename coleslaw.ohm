@@ -2,30 +2,55 @@ Coleslaw <: ES5 {
 
     model = "model"
     field = "field"
+    validate = "validate"
+
+    // Relationship types
     child = "child"         // 1:M
     parent = "parent"       // M:1
     sibling = "sibling"     // M:M
     peer = "peer"           // 1:1
 
-    keyword +=
-        model |
-        field |
-        child |
-        parent |
-        sibling |
-        peer
+    // Field types
+    string = "string"
+    number = "number"
+    boolean = "boolean"
+    binary = "binary"
 
-    Declaration +=
-        ModelDeclaration
+    keyword += model
+
+    Declaration += ModelDeclaration
+
+    ModelDeclaration =
+        model identifier "{" (
+            FieldDeclaration |
+            ValidationDeclaration |
+            RelationshipDeclaration
+        )* "}"
+
+    FieldType =
+        string |
+        number |
+        boolean |
+        binary
+        // list
+        // map
+        // SetOf<number>
+        // SetOf<string>
+        // SetOf<binary>
 
     FieldDeclaration =
         field
         identifier
-        (":" nonemptyListOf<ValidationExpression, ",">)?
+        ":"
+        FieldType
         #(sc)
 
-    ValidationExpression =
+    ValidationDeclaration =
+        validate
         identifier
+        ":"
+        identifier
+        #(sc)
 
     RelationshipType =
         child |
@@ -42,10 +67,5 @@ Coleslaw <: ES5 {
     // AccessDeclaration
     // AuthorizationDeclaration
 
-    ModelDeclaration =
-        model identifier "{" (
-            FieldDeclaration |
-            RelationshipDeclaration
-        )* "}"
 
 }

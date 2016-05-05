@@ -1,5 +1,6 @@
 var fs = require('fs')
 var assert = require('assert')
+var debug = require('debug')('coleslaw')
 var async = require('async')
 var ohm = require('ohm-js')
 var es5 = require('ohm-js/examples/ecmascript/es5')
@@ -9,28 +10,42 @@ var semantics = grammar.extendSemantics(es5.semantics)
 
 semantics.extendAttribute('modifiedSource', {
     ModelDeclaration: (model, name, curlyOpen, members, curlyClose) => {
-        var code = `var ${name.asES5} = { ${members.asES5} }`
-        // console.log(code)
+        var code = `var ${name.asES5} = (function () {
+            var fields = []
+            var relationships = []
+            var validations = []
+            var authorizations = []
+            var access = []
+            ${members.asES5}
+            return {
+                fields: fields,
+                relationships: relationships,
+                validations: validations,
+                authorizations: authorizations,
+                access: access
+            }
+        })()`
+        debug(code)
         return code
     },
-    FieldDeclaration: (f, name, c, rules, sc) => {
-        return `${name.asES5}: {
-            type: 'field',
+    FieldDeclaration: (f, name, c, type, sc) => {
+        return `fields.push({
             name: '${name.asES5}',
-            rules: {
-                validation: [${rules.asES5}]
-            }
-        }`
+            type: '${type.asES5}',
+        })`
     },
-    ValidationExpression: (name) => {
-        return `'${name.asES5}'`
+    ValidationDeclaration: (v, field, c, type, sc) => {
+        return `validations.push({
+            field: '${field.asES5}',
+            type: '${type.asES5}'
+        })`
     },
     RelationshipDeclaration: (type, name, c, _with) => {
-        return `${name.asES5}: {
+        return `relationships.push({
             type: '${type.asES5}',
             name: '${name.asES5}',
             with: '${_with.asES5}'
-        }`
+        })`
     }
 })
 

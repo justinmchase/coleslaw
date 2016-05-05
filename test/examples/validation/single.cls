@@ -1,7 +1,10 @@
 model Example {
-    field name: string
+    validate name: required
 }
 
-var v = Example.name.rules.validation
-assert(v.length === 1)
-assert(v[0] === 'string')
+Example.validations.should.deep.equal([
+    {
+        field: 'name',
+        type: 'required'
+    }
+])

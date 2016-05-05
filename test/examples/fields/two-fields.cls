@@ -1,7 +1,15 @@
 model Foo {
-    field x
-    field y
+    field x: string
+    field y: boolean
 }
 
-assert(Foo.x)
-assert(Foo.y)
+Foo.fields.should.deep.equal([
+    {
+        name: 'x',
+        type: 'string'
+    },
+    {
+        name: 'y',
+        type: 'boolean'
+    }
+])

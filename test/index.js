@@ -1,14 +1,18 @@
 var fs = require('fs')
 var path = require('path')
-var assert = require('assert')
-var coleslaw = require('..');
+var chai = require('chai')
+var coleslaw = require('..')
+
+var should = chai.should()
+var expect = chai.expect
+var assert = chai.assert
 
 describe('coleslaw', () => {
-    
+
     // The .cls files in the exmaples directory
     // are compiled into javascript and then
-    // eval'd as tests. 
-    
+    // eval'd as tests.
+
     function addTest(p) {
         it(path.basename(p, '.cls'), (done) => {
             coleslaw.compile(p, (err, code) => {

@@ -1,5 +1,8 @@
 model Foo {
-   field x
+   field x: string
 }
 
-assert(Foo.x)
+Foo.fields.should.deep.equal([{
+  name: 'x',
+  type: 'string'
+}])
