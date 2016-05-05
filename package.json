@@ -17,6 +17,11 @@
   },
   "homepage": "https://github.com/justinmchase/coleslawjs#readme",
   "dependencies": {
-    "async": "^1.5.2"
+    "async": "^1.5.2",
+    "ohm-js": "^0.10.0"
+  },
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "mocha": "^2.4.5"
   }
 }

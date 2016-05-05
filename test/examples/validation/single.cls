@@ -2,4 +2,6 @@ model Example {
     field name: string
 }
 
-assert(new Example().name.rules.validation[0] === 'string')
+var v = Example.name.rules.validation
+assert(v.length === 1)
+assert(v[0] === 'string')

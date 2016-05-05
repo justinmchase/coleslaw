@@ -2,22 +2,50 @@ Coleslaw <: ES5 {
 
     model = "model"
     field = "field"
-    // validate = "validate"
-    keyword += model | field
-    
-    Declaration += ModelDeclaration
-    
-    FieldDeclaration = field identifier (":" nonemptyListOf<ValidationExpression, ",">)? #(sc)
-    
-    ValidationExpression = identifier
-    
+    child = "child"         // 1:M
+    parent = "parent"       // M:1
+    sibling = "sibling"     // M:M
+    peer = "peer"           // 1:1
+
+    keyword +=
+        model |
+        field |
+        child |
+        parent |
+        sibling |
+        peer
+
+    Declaration +=
+        ModelDeclaration
+
+    FieldDeclaration =
+        field
+        identifier
+        (":" nonemptyListOf<ValidationExpression, ",">)?
+        #(sc)
+
+    ValidationExpression =
+        identifier
+
+    RelationshipType =
+        child |
+        parent |
+        sibling |
+        peer
+
+    RelationshipDeclaration =
+        RelationshipType
+        identifier
+        ":"
+        identifier
+
     // AccessDeclaration
     // AuthorizationDeclaration
-    // RelationshipDeclaration
-    
+
     ModelDeclaration =
         model identifier "{" (
-            FieldDeclaration
+            FieldDeclaration |
+            RelationshipDeclaration
         )* "}"
 
 }

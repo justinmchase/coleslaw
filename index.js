@@ -9,10 +9,12 @@ var semantics = grammar.extendSemantics(es5.semantics)
 
 semantics.extendAttribute('modifiedSource', {
     ModelDeclaration: (model, name, curlyOpen, members, curlyClose) => {
-        return `var ${name.asES5} = function () { ${members.asES5} }`
+        var code = `var ${name.asES5} = { ${members.asES5} }`
+        // console.log(code)
+        return code
     },
     FieldDeclaration: (f, name, c, rules, sc) => {
-        return `this.${name.asES5} = {
+        return `${name.asES5}: {
             type: 'field',
             name: '${name.asES5}',
             rules: {
@@ -22,16 +24,23 @@ semantics.extendAttribute('modifiedSource', {
     },
     ValidationExpression: (name) => {
         return `'${name.asES5}'`
+    },
+    RelationshipDeclaration: (type, name, c, _with) => {
+        return `${name.asES5}: {
+            type: '${type.asES5}',
+            name: '${name.asES5}',
+            with: '${_with.asES5}'
+        }`
     }
 })
 
 function compile(sources, callback) {
     assert(typeof callback === 'function')
     if (typeof sources === 'string') sources = [sources]
-    
+
     assert(sources)
     assert(sources.length)
-    
+
     var code = ''
     async.map(sources, fs.readFile, (err, results) => {
         if (err) return callback(err)
@@ -40,7 +49,7 @@ function compile(sources, callback) {
             var result = semantics(match)
             code += result.asES5
         })
-        
+
         callback(null, code)
     })
 }

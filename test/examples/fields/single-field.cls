@@ -2,4 +2,4 @@ model Foo {
    field x
 }
 
-assert(new Foo().x)
+assert(Foo.x)
