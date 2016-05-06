@@ -1,16 +1,18 @@
 var fs = require('fs')
+var path = require('path')
 var assert = require('assert')
 var debug = require('debug')('coleslaw')
 var async = require('async')
 var ohm = require('ohm-js')
 var es5 = require('ohm-js/examples/ecmascript/es5')
 
-var grammar = ohm.grammar(fs.readFileSync('./coleslaw.ohm'), { ES5: es5.grammar });
+var grammar = ohm.grammar(fs.readFileSync(path.join(__dirname, 'coleslaw.ohm')), { ES5: es5.grammar });
 var semantics = grammar.extendSemantics(es5.semantics)
 
 semantics.extendAttribute('modifiedSource', {
     ModelDeclaration: (model, name, curlyOpen, members, curlyClose) => {
-        var code = `var ${name.asES5} = (function () {
+        var name = name.asES5
+        var code = `var ${name} = new (function Model() {
             var fields = []
             var relationships = []
             var validations = []
@@ -18,6 +20,8 @@ semantics.extendAttribute('modifiedSource', {
             var access = []
             ${members.asES5}
             return {
+                type: 'model',
+                name: '${name}',
                 fields: fields,
                 relationships: relationships,
                 validations: validations,
