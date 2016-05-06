@@ -25,27 +25,54 @@ semantics.extendAttribute('modifiedSource', {
                 access: access
             }
         })()`
-        debug(code)
+        // debug(code)
         return code
     },
     FieldDeclaration: (f, name, c, type, sc) => {
         return `fields.push({
-            name: '${name.asES5}',
-            type: '${type.asES5}',
-        })`
+                name: '${name.asES5}',
+                type: '${type.asES5}',
+            })`
     },
     ValidationDeclaration: (v, field, c, type, sc) => {
         return `validations.push({
-            field: '${field.asES5}',
-            type: '${type.asES5}'
-        })`
+                field: '${field.asES5}',
+                type: '${type.asES5}'
+            })`
     },
     RelationshipDeclaration: (type, name, c, _with) => {
         return `relationships.push({
-            type: '${type.asES5}',
-            name: '${name.asES5}',
-            with: '${_with.asES5}'
-        })`
+                type: '${type.asES5}',
+                name: '${name.asES5}',
+                with: '${_with.asES5}'
+            })`
+    },
+    AuthorizationDeclaration: (a, type, role, action, sc) => {
+        var roleName = role.asES5
+            .replace(/'/g, '')
+            .replace(/"/g, '')
+
+        var code = `authorizations.push({
+                type: '${type.asES5}',
+                role: '${roleName}',
+                action: '${action.asES5}'
+            })`
+
+       return code
+    },
+    AccessDeclaration: (a, type, role, mode, field, sc) => {
+        var roleName = role.asES5
+            .replace(/'/g, '')
+            .replace(/"/g, '')
+
+        var code = `access.push({
+                type: '${type.asES5}',
+                role: '${roleName}',
+                mode: '${mode.asES5}',
+                field: '${field.asES5}'
+            })`
+
+        return code
     }
 })
 

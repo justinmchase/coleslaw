@@ -3,6 +3,8 @@ Coleslaw <: ES5 {
     model = "model"
     field = "field"
     validate = "validate"
+    authorize = "authorize"
+    access = "access"
 
     // Relationship types
     child = "child"         // 1:M
@@ -24,7 +26,9 @@ Coleslaw <: ES5 {
         model identifier "{" (
             FieldDeclaration |
             ValidationDeclaration |
-            RelationshipDeclaration
+            RelationshipDeclaration |
+            AuthorizationDeclaration |
+            AccessDeclaration
         )* "}"
 
     FieldType =
@@ -64,8 +68,51 @@ Coleslaw <: ES5 {
         ":"
         identifier
 
-    // AccessDeclaration
-    // AuthorizationDeclaration
+    AuthorizeType =
+        "allow" |
+        "deny"
 
+    AuthorizeRole =
+        "*" |
+        "?" |
+        stringLiteral |
+        identifier
+
+    AuthorizeAction =
+        "create" |
+        "retrieve" |
+        "update" |
+        "delete"
+
+    AuthorizationDeclaration =
+        authorize
+        AuthorizeType
+        AuthorizeRole
+        AuthorizeAction
+        #(sc)
+
+    AccessType =
+        "allow" |
+        "deny"
+
+    AccessRole =
+        "*" |
+        "?" |
+        stringLiteral |
+        identifier
+
+    AccessMode =
+        "get" |
+        "set"
+
+    AccessField = identifier
+
+    AccessDeclaration =
+        access
+        AccessType
+        AccessRole
+        AccessMode
+        AccessField
+        #(sc)
 
 }

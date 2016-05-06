@@ -3,13 +3,4 @@ model example {
     validate email: required
 }
 
-example.validations.should.deep.equal([
-    {
-        field: 'email',
-        type: 'email'
-    },
-    {
-        field: 'email',
-        type: 'required'
-    }
-])
+example.validations.length.should.equal(2)

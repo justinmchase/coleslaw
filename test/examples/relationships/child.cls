@@ -2,8 +2,4 @@ model foo {
     child bars: bar
 }
 
-foo.relationships.should.deep.equal([{
-    type: 'child',
-    name: 'bars',
-    with: 'bar'
-}])
+foo.relationships[0].type.should.equal('child')
