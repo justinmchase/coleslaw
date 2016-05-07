@@ -32,8 +32,11 @@ semantics.extendAttribute('modifiedSource', {
         // debug(code)
         return code
     },
-    FieldDeclaration: (f, name, c, type, sc) => {
+    FieldDeclaration: (f, auto, id, name, c, type, sc) => {
+        
         return `fields.push({
+                auto:  ${'' + auto.asES5[0] === 'auto'},
+                index: ${'' + id.asES5[0] === 'id'},
                 name: '${name.asES5}',
                 type: '${type.asES5}',
             })`

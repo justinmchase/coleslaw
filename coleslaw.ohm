@@ -5,6 +5,8 @@ Coleslaw <: ES5 {
     validate = "validate"
     authorize = "authorize"
     access = "access"
+    auto = "auto"
+    id = "id"
 
     // Relationship types
     child = "child"         // 1:M
@@ -44,6 +46,7 @@ Coleslaw <: ES5 {
 
     FieldDeclaration =
         field
+        (auto? id)?
         identifier
         ":"
         FieldType
