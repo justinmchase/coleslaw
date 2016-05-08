@@ -11,14 +11,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/justinmchase/coleslawjs.git"
+    "url": "git+https://github.com/justinmchase/coleslaw.git"
   },
   "author": "Justin Chase <justin.m.chase@gmail.com>",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/justinmchase/coleslawjs/issues"
+    "url": "https://github.com/justinmchase/coleslaw/issues"
   },
-  "homepage": "https://github.com/justinmchase/coleslawjs#readme",
+  "homepage": "https://github.com/justinmchase/coleslaw#readme",
   "dependencies": {
     "async": "^1.5.2",
     "debug": "^2.2.0",
