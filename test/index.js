@@ -2,6 +2,7 @@ var fs = require('fs')
 var path = require('path')
 var chai = require('chai')
 var coleslaw = require('..')
+var Model = require('../lib/model')
 
 var should = chai.should()
 var expect = chai.expect
