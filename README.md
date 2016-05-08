@@ -75,6 +75,7 @@ In this case we are using the `coleslaw.build` example to create a Model type fr
 - access rules
 
 ## Model Builders
+- [coleslaw-gulp](http://npmjs.org/package/coleslaw-gulp)
 - [coleslaw-express](http://npmjs.org/package/coleslaw-express)
 - [coleslaw-dynamo](http://npmjs.org/package/coleslaw-dynamo)
 - [coleslaw-angular](http://npmjs.org/package/coleslaw-angular)
