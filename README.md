@@ -43,39 +43,21 @@ var fs = require('fs')
 var path = require('path')
 var coleslaw = require('coleslaw')
 
-coleslaw.compile(fs.readFileSync(path.join(__dirname, 'example.cls'), 'utf8'), (err, code) => {
+var content = fs.readFileSync(path.join(__dirname, 'example.cls'), 'utf8')
+coleslaw.compile(content, (err, code) => {
     if (err) throw err
-    eval(code)
+    fs.saveFileSync('./example.js', code)
+    var Example = require('./example')
+    
+    // or you could eval(code)
 })
 ```
 
 The resulting code is a plain javascript object representing the model described. This model can be used by various coleslaw builders.
 
-### Build your model definitions into Models
-The default model builder can be used to generate Model instances from model defintions. Model instances have standard CRUD (create, retrieve, update, delete) functionality.
-
-```javascript
-model Example {
-    field value: string
-}
-
-var ExampleModel = coleslaw.build(Example, options) // Example is the model definition
-var instance = new ExampleModel({ value: 'test' })  // from an existing object
-instance.set('value', 'success')                    // update a field value
-instance.save()                                     // Calls dataAccess.update()
-```
-
-In this case we are using the `coleslaw.build` example to create a Model type from the Example model definition. Next we can create an instance of ExampleModel and do basic CRUD operations. The model keeps track of the state of the object.
-
-## Model features
-- fields
-- relationships
-- validation rules
-- authorization rules
-- access rules
-
 ## Model Builders
-- [coleslaw-gulp](http://npmjs.org/package/coleslaw-gulp)
-- [coleslaw-express](http://npmjs.org/package/coleslaw-express)
-- [coleslaw-dynamo](http://npmjs.org/package/coleslaw-dynamo)
-- [coleslaw-angular](http://npmjs.org/package/coleslaw-angular)
+- [gulp-coleslaw](http://npmjs.org/package/gulp-coleslaw) Compiles your model definitions with gulp
+- [coleslaw-models](http://npmjs.org/package/coleslaw-models) Builds CRUD models from your model definitions 
+- [coleslaw-express](http://npmjs.org/package/coleslaw-express) Builds express routes from your model definitions
+- [coleslaw-dynamo](http://npmjs.org/package/coleslaw-dynamo) Builds dynamo dataAccess layer from your model definitions
+- [coleslaw-angular](http://npmjs.org/package/coleslaw-angular) Builds angular2 REST dataAccess layer from your model definitions

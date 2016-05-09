@@ -3,7 +3,6 @@ var path = require('path')
 var chai = require('chai')
 var sinon = require('sinon')
 var coleslaw = require('..')
-var Model = require('../lib/model')
 
 var should = chai.should()
 var expect = chai.expect
