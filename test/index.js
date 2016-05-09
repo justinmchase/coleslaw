@@ -1,7 +1,9 @@
 var fs = require('fs')
 var path = require('path')
 var chai = require('chai')
+var sinon = require('sinon')
 var coleslaw = require('..')
+var Model = require('../lib/model')
 
 var should = chai.should()
 var expect = chai.expect
@@ -17,6 +19,14 @@ describe('coleslaw', () => {
         it(path.basename(p, '.cls'), (done) => {
             coleslaw.compile(p, (err, code) => {
                 if (err) return done(err)
+                var options = {
+                    dataAccess: {
+                        create: sinon.stub(),
+                        retrieve: sinon.stub(),
+                        update: sinon.stub(),
+                        delete: sinon.stub()
+                    }
+                }
                 eval(code)
                 done()
             })
