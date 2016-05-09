@@ -25,10 +25,9 @@ var path = require('path')
 var coleslaw = require('coleslaw')
 
 var clsPath = path.join(__dirname, 'example.cls')
-var jsPath = path.join(__dirname, 'example.js')
  
 fs.readFile(clsPath, 'utf8', (err, cls) => {
-    coleslaw.compile(cls, (err, js) => {
+    coleslaw.compile(cls, (err, code) => {
         if (err) throw err
         // Do something with the generated code here...
     })
