@@ -14,7 +14,7 @@ describe('coleslaw', () => {
     // are compiled into javascript and then
     // eval'd as tests.
 
-    function addTest(p) {
+    function addExamples(p) {
         it(path.basename(p, '.cls'), (done) => {
             coleslaw.compile(p, (err, code) => {
                 if (err) return done(err)
@@ -32,20 +32,20 @@ describe('coleslaw', () => {
         })
     }
 
-    function generateTests(dir) {
+    function generateExamples(dir) {
         describe(path.basename(dir), () => {
             var results = fs.readdirSync(dir)
             results.forEach((i) => {
                 var p = path.join(dir, i)
                 var stat = fs.statSync(p)
                 if (stat.isFile() && path.extname(p) === '.cls') {
-                    addTest(p)
+                    addExamples(p)
                 } else if (stat.isDirectory()) {
-                    generateTests(p)
+                    generateExamples(p)
                 }
             })
         })
     }
 
-    generateTests(path.join(__dirname, 'examples'))
+    generateExamples(path.join(__dirname, 'examples'))
 })

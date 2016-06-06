@@ -27,6 +27,7 @@ var coleslaw = require('coleslaw')
 var clsPath = path.join(__dirname, 'example.cls')
  
 fs.readFile(clsPath, 'utf8', (err, cls) => {
+    if (err) throw err
     coleslaw.compile(cls, (err, code) => {
         if (err) throw err
         // Do something with the generated code here...
@@ -35,7 +36,7 @@ fs.readFile(clsPath, 'utf8', (err, cls) => {
 
 This will generate javascript that looks like this:
 
-```
+```javascript
 var Example = (function () {
     var fields = []
     var relationships = []
@@ -60,7 +61,7 @@ var Example = (function () {
 })()
 ```
 
-This code can be `eval`'d or saved to a file where it could then be `require`d instead. The object generated is called a `model definition`.
+This code can be eval'd or saved to a file and require'd instead. The object generated is called a `model definition`.
 
 ### Model Builders
 Next, you can leverage various model builders which convert the model definitions into various tiers of your application.
