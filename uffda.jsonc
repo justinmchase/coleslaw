@@ -1,0 +1,10 @@
+{
+  // Module names for packages. Each one maps to a jsr: specifier.
+  "imports": {
+    "@justinmchase/uffda": "jsr:@justinmchase/uffda@^0.9.0"
+  },
+  // What this project offers to others.
+  "exports": {
+    ".": "./src/hello.uff"
+  }
+}

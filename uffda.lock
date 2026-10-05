@@ -1,0 +1,10 @@
+{
+  "specifiers": {
+    "jsr:@justinmchase/uffda@^0.9.0": "0.9.0"
+  },
+  "jsr": {
+    "@justinmchase/uffda@0.9.0": {
+      "integrity": "35d2907dc7c0c404c229655b725ca8a3d3b933f59b4ef85748e2e306290a5f20"
+    }
+  }
+}

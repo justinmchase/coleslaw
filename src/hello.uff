@@ -1,0 +1,6 @@
+import "@justinmchase/uffda/tokenizer" Tokenizer;
+
+export Main;
+
+# Tokenizes whatever input it is given and echoes the tokens back.
+rule Main = tokens:Tokenizer -> (echo tokens);
