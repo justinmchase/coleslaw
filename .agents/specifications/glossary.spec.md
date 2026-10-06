@@ -128,8 +128,9 @@ capitals.
   and progresses it with a command. Any further logic is one or more state
   machines.
 - **Reactor**: a reaction to events, registered for them and expressed as state
-  machines, that progresses aggregates with commands. It runs in the process
-  that appended the events or, in events mode, as an entry point.
+  machines, that progresses aggregates with commands. Depending on the config,
+  it runs in the process that appended the events or, in events mode, as an
+  entry point.
 - **Event source**: a service that delivers events to events mode, such as a
   Kafka topic.
 - **Service**: a capability the program declares and the host program

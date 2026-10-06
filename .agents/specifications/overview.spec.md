@@ -133,10 +133,18 @@ of them.
 
 - Each mode's entry points MUST exist only in that mode: controllers only in API
   mode, consumers only in worker mode, and jobs only in job mode.
-- Reactors run in one of two ways. In events mode they are the entry points,
-  receiving events from an event source, such as a Kafka topic provided by a
-  service. In any other mode, a reactor MAY instead run in the same process,
-  after the events it reacts to are appended.
+- Reactors run in one of two ways, and the config, not the program, MUST decide
+  which. The same program MUST run either way without change.
+  - **Distributed.** Processes that append events publish them to an event
+    source, such as a Kafka topic provided by a service, and a separate process
+    in events mode receives them and runs the reactors. This suits production,
+    where producing and consuming scale as separate services.
+  - **In process.** The process that appended the events runs the reactors
+    itself, with no event source. This suits running locally, with the whole
+    program in one process and its storage in memory.
+- Either way, reactions follow the same rules: each runs after the events it
+  reacts to are appended, as its own transaction, and the program cannot tell
+  which way it is running.
 - A job's schedule is not part of the program. Whatever starts the process, such
   as cron or a deployment's migration step, decides when a job runs.
 - The runtime MUST construct only what the selected mode reaches: its entry
