@@ -72,3 +72,23 @@ services.
   filtering are declared, opt-in per operation, never available everywhere.
   Iterating a whole collection is allowed only in modes suited to it, such as a
   job, never while serving a request.
+- `timers`: deadlines and commands scheduled for later, such as escalating an
+  approval not decided within three days. Time comes from the clock service, so
+  a checker controls it.
+- `tenancy`: every aggregate, projection, and query scoped to a tenant, enforced
+  by the language rather than by remembering a filter.
+- `problems`: one standard response format, such as RFC 9457 problem details,
+  for refused input, rejections, conflicts, and failures, so every client reads
+  them the same way.
+- `deletion`: hard and soft delete as declared choices: whether a deleted
+  aggregate is removed or kept and hidden, and what projections and queries see.
+- `mocking`: replacing services, and giving aggregates and projections chosen
+  states, so a program's managers, reactors, and controllers can be tested
+  without real technologies.
+
+### Cross-cutting concerns
+
+- `extensions`: concerns that run through every program regardless of its code,
+  added to the runtime rather than written in the program: correlating each
+  command and event with the request, job, or event that caused it, auditing
+  who did what, and tracing.
