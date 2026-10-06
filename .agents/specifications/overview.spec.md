@@ -130,6 +130,52 @@ of them.
   program MAY therefore share the program's storage, such as its event streams,
   directly: they cannot disagree about its shape.
 
+## Services from implementors
+
+Coleslaw does not choose an application's technologies. A program declares each
+service it needs as a set of operations whose inputs and outputs are patterns;
+the implementor provides an implementation of that declaration for whatever
+technology they use, such as a particular database, identity provider, or
+message broker.
+
+- A program MUST be able to declare a service without naming any technology.
+- An implementor MUST be able to provide their own implementation of any
+  declared service, configured from the program's config.
+- Values crossing a service boundary MUST match the patterns the declaration
+  gives, in both directions.
+
+## Reference applications
+
+These existing applications show the kinds of things Coleslaw programs must be
+able to express. They are examples of the patterns, not dependencies: Coleslaw
+does not use them, and it may use different technologies.
+
+- [Grove](https://github.com/justinmchase/grove), a library implementing the
+  hybrid microservice mode pattern in TypeScript. It shows modes selected from
+  the command line, an application context built from services, then
+  repositories, then managers, and a job mode that runs one named job.
+- [Real Polite Protocol](https://github.com/justinmchase/real-polite-protocol),
+  an application built with Grove. Coleslaw MUST be able to express what it
+  does, including:
+  - **Config** read from the environment, with defaults, values derived from
+    other settings (such as a public domain computed from a hostname and port),
+    and defaults that depend on other settings or on where the process runs.
+  - **Middleware**: CORS, including unauthenticated preflight requests, and
+    bearer-token authentication that establishes the request's principal or
+    answers with an authentication challenge.
+  - **Controllers** that check requests before anything else happens: content
+    type and size limits, signature verification, freshness windows, and
+    rejecting duplicates, each failure answered with its own status and error
+    code.
+  - **Requests dispatched by shape**: different kinds of envelope, told apart by
+    their contents, routed to different handling.
+  - **Discovery endpoints**, such as OAuth protected-resource metadata.
+  - **Managers** per domain area (accounts, contacts, invitations, messages,
+    policies), composed of storage, authentication, and event services.
+  - **Migrations**, run before the application serves requests.
+  - **Domain errors** that map to responses.
+  - **Tools exposed over MCP** alongside the HTTP routes.
+
 ## Execution model
 
 - Coleslaw programs are interpreted. The runtime, built on the Uffda runtime,
@@ -141,6 +187,18 @@ of them.
   always be rebuilt from them.
 
 ## Open questions
+
+- **Choices that are not logic.** Patterns choose between alternatives, and
+  config needs choices such as "port 8000 on localhost, otherwise 443". Whether
+  such choices are written as pattern alternatives with projections, and how
+  that squares with state machines being the only logic, needs a precise rule:
+  for example, that patterns may classify values but only state machines may
+  decide behavior.
+- **MCP.** Whether tools exposed over MCP are another kind of entry point, or
+  routes of a kind within API mode.
+- **Migrations.** Whether migrations are jobs run by the deployment, as job mode
+  suggests, or a step of startup in every mode, as Real Polite Protocol does
+  today. With event-sourced aggregates they may matter mostly for projections.
 
 - **Reacting to events.** Managers that react to one aggregate's events, to keep
   others eventually consistent, must run somewhere. Worker mode is the natural
