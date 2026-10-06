@@ -83,6 +83,8 @@ stages:
 
 1. **Input.** The runtime gathers the process's input: its command-line
    arguments, its environment variables, and, if one is named, a config file.
+   When more than one supplies the same setting, the command line MUST win over
+   the environment, and the environment over the config file.
 2. **Config.** The input is parsed into the program's config, by matching it
    against the config declaration. Input that does not match MUST stop the
    process before anything else is constructed, with a diagnostic naming what
@@ -144,10 +146,6 @@ of them.
   others eventually consistent, must run somewhere. Worker mode is the natural
   home, with events delivered to consumers through a queue; whether they may
   also run in the process that emitted the events is undecided.
-- **Input precedence.** When the command line, the environment, and a config
-  file all supply a setting, which wins. The conventional order is command line,
-  then environment, then file.
-
 - **Branching in managers.** Whether every manager operation is a state machine,
   or only those that branch or wait, with straight-line operations written as
   plain compositions.
