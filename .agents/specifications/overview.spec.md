@@ -274,3 +274,7 @@ Uffda, specified there, before the Coleslaw chapters that depend on them:
 - **Resolving other languages.** Uffda's module resolution rejects file
   extensions other than its own today. It MUST be able to resolve an import of a
   project language's source file to that file's compiled syntax tree.
+- **Matching undeclared keys.** Uffda's object pattern ignores keys it does not
+  declare. It MUST be able to say what those keys must match, including that
+  there may be none, so that shapes can be closed (see
+  [patterns as types](./patterns-as-types.spec.md#closed-objects)).
