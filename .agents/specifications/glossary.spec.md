@@ -70,8 +70,12 @@ capitals.
 - **Version**: the number of events that have changed an aggregate. Each event's
   version is the aggregate's version once that event has been evolved.
 - **Event record**: an event together with what the runtime records with it: the
-  aggregate's kind and identity, the event's version, and the time it was
-  recorded.
+  aggregate's kind and identity, the event's name, its shard key, its version,
+  and the time it was recorded.
+- **Shard key**: the key that orders an event's delivery: by default its
+  aggregate kind, its name, and its aggregate's identity, or one its aggregate
+  or its declaration computes. Events with the same shard key reach each reactor
+  in order; nothing else is ordered.
 - **Entity**: a value inside an aggregate with an identity unique only within
   that aggregate, such as a line of an order.
 - **Outcome**: how handling a command ends: accepted, with the new state saved
@@ -138,10 +142,11 @@ capitals.
 - **Operation**: one business operation of a manager: it binds its input and
   progresses one aggregate with at most one command. Any further logic is a
   state machine that lasts for the invocation and is never stored.
-- **Reactor**: a reaction to events, registered for them and expressed as state
-  machines, that progresses aggregates with commands. Depending on the config,
-  it runs in the process that saved the events or, in events mode, as an entry
-  point.
+- **Reactor**: a declaration that reacts to events by sending commands and
+  calling services. Depending on the config, it runs in the process that saved
+  the events or, in events mode, as an entry point.
+- **Reaction**: one reactor handling one event, by a state machine that lasts
+  for the reaction and is never stored. A failed reaction is run again.
 - **Event source**: a service that delivers events to events mode, such as a
   Kafka topic.
 - **Service**: a capability the program declares and the host program

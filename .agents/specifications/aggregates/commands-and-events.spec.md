@@ -28,6 +28,11 @@ capitals.
   language (for example `Submitted`, `Cancelled`).
 - An emitted event's payload MUST match its pattern; otherwise the command that
   emitted it MUST be rejected.
+- An event declaration MAY declare a shard key, computed by an expression from
+  the payload and the rest of the record, overriding any the aggregate declares
+  for all its events. Without either, an event's shard key is its aggregate
+  kind, its name, and its aggregate's identity. The shard key orders the event's
+  delivery to reactors (see [reactors](../reactors.spec.md#order)).
 - An event, once recorded, MUST NOT change.
 - An event is a notice of a change, not the program's record of it: once
   delivered to everything that observes it, it MAY be discarded, and the program
@@ -39,6 +44,8 @@ capitals.
 When the runtime records an event for delivery, it records with it:
 
 - the aggregate's kind and identity;
+- the event's name;
+- its shard key;
 - the event's version: the aggregate's version once the event has been evolved;
 - the time the runtime recorded it.
 

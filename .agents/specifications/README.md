@@ -33,6 +33,8 @@ statements.
   and identity services, and failure.
 - [Managers](./managers.spec.md): operations, their state machines, the one
   command, and results.
+- [Reactors](./reactors.spec.md): reactions, commands and effects, repeats,
+  order, and failure.
 
 ## Planned chapters
 
@@ -45,7 +47,6 @@ shape.
 - `startup`: the pipeline from config to an application.
 - `modes`: declaring modes, selecting one, and what each mode constructs and
   runs.
-- `reactors`: reacting to events, in process and in events mode.
 - `controllers/`: routes, authentication, authorization, and middleware.
 - `consumers`: queues, messages, and binding them to managers.
 - `jobs`: job declarations and their arguments.
