@@ -27,9 +27,13 @@ patterns as its types and Uffda expressions as its expression language.
 - **A constrained universe.** Each layer can express only what belongs to it.
   The language, not convention, keeps business logic out of controllers and
   infrastructure out of aggregates.
-- **State machines are the only logic.** A decision that depends on state or on
-  input MUST be expressed as a transition or handler in a state machine. No
-  other construct branches.
+- **State machines are the only logic.** Choosing what happens (which events are
+  emitted, whether a command is rejected, which state comes next) MUST be done
+  by a handler in a state machine. No other construct chooses what happens.
+- **Patterns may choose values.** A pattern's alternatives MAY choose a value
+  anywhere: a default that depends on another setting, a fallback for a missing
+  value, or which shape an input has. Choosing a value computes it and has no
+  effect, so it is not logic in the sense above.
 - **The ubiquitous language.** Declarations are named in the domain's terms, and
   Coleslaw's own keywords are the vocabulary of domain-driven design, with the
   meanings the glossary gives them.
@@ -38,7 +42,7 @@ patterns as its types and Uffda expressions as its expression language.
   pattern.
 - **Expressions are pure.** Expressions compute values and have no side effects.
   The only side effects in a program are the events aggregates emit and the
-  calls managers make to services.
+  calls managers and reactors make to services.
 - **One source of truth.** A Coleslaw program is the only definition of its
   domain. Compiled forms are build outputs, never edited and never treated as
   sources. Programs are text, so they version and merge like any other code.
@@ -48,22 +52,30 @@ patterns as its types and Uffda expressions as its expression language.
 | Layer      | Holds                                                                | May use                           |
 | ---------- | -------------------------------------------------------------------- | --------------------------------- |
 | Config     | The settings a process runs with, parsed from its input              | Patterns and expressions only     |
-| Controller | Routes, authentication, authorization, middleware                    | Managers                          |
+| Controller | Routes, authentication, authorization, middleware                    | Managers, projections             |
 | Consumer   | The handling of messages from a queue                                | Managers                          |
 | Job        | A named unit of work that runs once                                  | Managers                          |
-| Manager    | Business operations and long-running processes                       | Aggregates, projections, services |
+| Manager    | Business operations: bind inputs, load an aggregate, progress it     | Aggregates, projections, services |
+| Reactor    | Reactions to events, as state machines                               | Aggregates, projections, services |
 | Aggregate  | Identity, fields, commands, events, a state machine, invariants      | Patterns and expressions only     |
 | Projection | A read model derived from events                                     | Patterns and expressions only     |
 | Service    | A declared capability whose implementation the host program provides | Nothing in the program            |
 
 ## Dependency rules
 
-- Controllers, consumers, and jobs MUST reach the domain only through managers.
-  They MUST NOT send commands to aggregates, read projections, or call services
-  directly.
-- A manager MUST be a composition: it sends commands to aggregates, reads
-  projections, and calls services. Any branching in a manager MUST be a state
-  machine, as everywhere else.
+- Controllers, consumers, and jobs MUST change the domain only through managers.
+  They MUST NOT send commands to aggregates or call services directly.
+- Controllers MAY read projections directly. Consumers and jobs read through
+  managers.
+- A manager operation binds its inputs, loads the aggregate it concerns, and
+  progresses it by sending it a command. Any logic a manager needs beyond that
+  MUST be expressed as one or more state machines.
+- A reactor is registered for events, and its logic MUST be expressed as one or
+  more state machines. Like a manager, it progresses aggregates by sending them
+  commands, and it MAY read projections and call services.
+- A reactor MUST NOT run inside the transaction of the command whose event it
+  reacts to. Each reaction is its own transaction, so one command still changes
+  one aggregate.
 - An aggregate MUST NOT call managers, services, or other aggregates. It refers
   to another aggregate only by that aggregate's identity.
 - An aggregate's handling of a command MUST be deterministic: given the same
@@ -71,7 +83,7 @@ patterns as its types and Uffda expressions as its expression language.
   nondeterministic, such as the current time or a new identity, MUST arrive in
   the command.
 - One command changes one aggregate. Consistency across aggregates is eventual:
-  a manager reacts to one aggregate's events by sending commands to others.
+  a reactor reacts to one aggregate's events by sending commands to others.
 - A service MUST NOT call back into the program's layers.
 - Config MUST NOT depend on any other layer. Services, and through them the rest
   of the application, are constructed from config.
@@ -110,16 +122,34 @@ of them.
 
 - A program MUST declare the modes it supports, and its input MUST select
   exactly one.
-- Coleslaw defines three modes. Others MAY be defined later.
+- Coleslaw defines four modes. Others MAY be defined later.
 
   | Mode   | Runs                                                                 | Entry points |
   | ------ | -------------------------------------------------------------------- | ------------ |
   | API    | Serves requests until stopped                                        | Controllers  |
   | Worker | Handles messages from queues until stopped                           | Consumers    |
   | Job    | Runs the one job its input names, then exits with that job's outcome | Jobs         |
+  | Events | Handles events from an event source until stopped                    | Reactors     |
 
 - Each mode's entry points MUST exist only in that mode: controllers only in API
   mode, consumers only in worker mode, and jobs only in job mode.
+- Reactors run in one of two ways, and the config, not the program, MUST decide
+  which. The same program MUST run either way without change.
+  - **Distributed.** Processes that append events publish them to an event
+    source, such as a Kafka topic provided by a service, and a separate process
+    in events mode receives them and runs the reactors. This suits production,
+    where producing and consuming scale as separate services.
+  - **In process.** The process that appended the events runs the reactors
+    itself, with no event source. This suits running locally, with the whole
+    program in one process and its storage in memory.
+- Either way, reactions follow the same rules: each runs after the events it
+  reacts to are appended, as its own transaction, and the program cannot tell
+  which way it is running.
+- Events are delivered to reactors at least once. The runtime MUST NOT promise
+  more, whichever way reactors run and whatever an event source offers, and a
+  reactor MUST give the same result when it receives an event it has already
+  handled. An event is identified by its aggregate's kind and identity and its
+  version, so a repeat can always be recognized.
 - A job's schedule is not part of the program. Whatever starts the process, such
   as cron or a deployment's migration step, decides when a job runs.
 - The runtime MUST construct only what the selected mode reaches: its entry
@@ -154,65 +184,93 @@ does not use them, and it may use different technologies.
   hybrid microservice mode pattern in TypeScript. It shows modes selected from
   the command line, an application context built from services, then
   repositories, then managers, and a job mode that runs one named job.
-- [Real Polite Protocol](https://github.com/justinmchase/real-polite-protocol),
-  an application built with Grove. Coleslaw MUST be able to express what it
-  does, including:
-  - **Config** read from the environment, with defaults, values derived from
-    other settings (such as a public domain computed from a hostname and port),
-    and defaults that depend on other settings or on where the process runs.
-  - **Middleware**: CORS, including unauthenticated preflight requests, and
-    bearer-token authentication that establishes the request's principal or
-    answers with an authentication challenge.
-  - **Controllers** that check requests before anything else happens: content
-    type and size limits, signature verification, freshness windows, and
-    rejecting duplicates, each failure answered with its own status and error
-    code.
-  - **Requests dispatched by shape**: different kinds of envelope, told apart by
-    their contents, routed to different handling.
-  - **Discovery endpoints**, such as OAuth protected-resource metadata.
-  - **Managers** per domain area (accounts, contacts, invitations, messages,
-    policies), composed of storage, authentication, and event services.
-  - **Migrations**, run before the application serves requests.
-  - **Domain errors** that map to responses.
-  - **Tools exposed over MCP** alongside the HTTP routes.
+- [Deploy Approval API](https://github.com/justinmchase/deploy-approval-api), an
+  application built with Grove that adds approval steps to GitHub deployments.
+  Coleslaw MUST be able to express what it does, including:
+  - **Config** read from the environment: required secrets (a GitHub App private
+    key, a database connection string), and optional settings with defaults (the
+    app id, the webhook path, the identity tenant and client).
+  - **Services** for technologies the implementor chooses: a GitHub App client
+    per installation, document storage, and a sign-in provider.
+  - **A middleware pipeline in order**: error handling, health checks, request
+    logging, static site and domain-verification files, the webhook, sign-in
+    that establishes the request's user, the authenticated routes, and a final
+    not-found response.
+  - **Webhooks** from another system, verified by signature, whose events start
+    business processes: a deployment awaiting protection rules starts an
+    approval.
+  - **Configuration read from the outside world** and checked against a shape:
+    each repository's approval file names the approval groups each environment
+    requires.
+  - **An approval process that is a state machine**: a deployment needs every
+    required group to approve; any rejection rejects it; with no groups
+    configured it is approved automatically; an approver may change their vote
+    only until the deployment is decided; and the final decision is reported
+    back to GitHub. Today this logic lives in a controller, which Coleslaw's
+    layers would not allow.
+  - **Routes with parameters checked against shapes**: an approval state that
+    must be `approved` or `rejected`, and paging with bounded `offset` and
+    `limit` and defaults.
+  - **Reads for the signed-in user**, such as the approvals awaiting them.
 
 ## Execution model
 
-- Coleslaw programs are interpreted. The runtime, built on the Uffda runtime,
-  executes compiled modules directly. Code generation MAY be added later as an
-  additional transformation, but running a program MUST NOT require it.
+- Coleslaw programs are interpreted: the runtime, built on the Uffda runtime,
+  interprets compiled syntax trees. Coleslaw does not generate code.
 - Aggregates are event-sourced. An aggregate's events are the source of truth
   for its state: the state is what results from applying each event, in order,
   to the aggregate's initial state. Projections are derived from events and can
   always be rebuilt from them.
 
-## Open questions
+## Compilation
 
-- **Choices that are not logic.** Patterns choose between alternatives, and
-  config needs choices such as "port 8000 on localhost, otherwise 443". Whether
-  such choices are written as pattern alternatives with projections, and how
-  that squares with state machines being the only logic, needs a precise rule:
-  for example, that patterns may classify values but only state machines may
-  decide behavior.
-- **MCP.** Whether tools exposed over MCP are another kind of entry point, or
-  routes of a kind within API mode.
-- **Migrations.** Whether migrations are jobs run by the deployment, as job mode
-  suggests, or a step of startup in every mode, as Real Polite Protocol does
-  today. With event-sourced aggregates they may matter mostly for projections.
+Coleslaw follows the same strategy as Uffda, and reuses Uffda's modules for it
+wherever it can.
 
-- **Reacting to events.** Managers that react to one aggregate's events, to keep
-  others eventually consistent, must run somewhere. Worker mode is the natural
-  home, with events delivered to consumers through a queue; whether they may
-  also run in the process that emitted the events is undecided.
-- **Branching in managers.** Whether every manager operation is a state machine,
-  or only those that branch or wait, with straight-line operations written as
-  plain compositions.
-- **Queries.** Whether controllers may read projections directly, as many
-  read-heavy applications want, or must always go through a manager.
-- **Concurrency.** How the runtime detects two commands racing on the same
-  aggregate (for example, by the version of its event stream).
-- **Checking programs.** Because all logic lives in state machines, programs
-  could be explored systematically the way P checks its machines, including
-  monitors that must not remain in a hot state.
-- **Code generation.** Which targets, if any, and how their templates are
-  versioned and changed.
+- Coleslaw source files MUST use the extension `.clsw`. (The earlier `.cls` is
+  already claimed by LaTeX classes, VBA class modules, and Apex classes.)
+- Coleslaw's grammar MUST be a Uffda language, declaring the `.clsw` extension,
+  so Uffda's tools can find and parse Coleslaw source.
+- Compiling a program MUST parse each source file with that grammar and write
+  its syntax tree as JSON to the project's output directory (`./bin` by
+  default), at the path Uffda's artifact layout gives it.
+- An import of one Coleslaw file from another MUST resolve, through Uffda's
+  module resolution, to the imported file's compiled syntax tree. Source is
+  never parsed when a program runs.
+- The runtime MUST run only compiled syntax trees, interpreting them according
+  to the selected mode.
+- Compiled syntax trees are build outputs: never edited, never committed, and
+  always reproducible from the source.
+
+## Checkability
+
+Coleslaw programs are meant to be checked systematically, the way the P language
+checks its machines: by running a program many times while varying everything
+outside its control, and checking its monitors after each run. Such a check
+finds failures that occur only in particular orderings, such as two reactions
+racing or a repeated event, which neither parsing nor matching can find. The
+checker itself will come later; the language MUST stay checkable now.
+
+- Every source of variation MUST be explicit at the program's edges: the
+  commands that arrive and their order, what services return, and how events are
+  delivered to reactors, including repeats.
+- Everything else MUST be deterministic, so that a run is reproduced exactly by
+  replaying the same choices at those edges.
+- A feature that would hide a source of variation inside the program, such as
+  reading the clock or generating an identity outside a command, MUST NOT be
+  added.
+
+## Uffda prerequisites
+
+Uffda does not yet do everything this chapter assumes. These changes belong in
+Uffda, specified there, before the Coleslaw chapters that depend on them:
+
+- **Publishing its languages.** Uffda MUST publish its pattern and expression
+  grammars, and what lowers them to runtime patterns and expressions, so that
+  Coleslaw's grammar can import them.
+- **Compiling other languages.** Uffda's compile emits only Uffda module
+  declarations today. It MUST be able to compile a source file of a project
+  language with that language's grammar, and write that language's syntax tree.
+- **Resolving other languages.** Uffda's module resolution rejects file
+  extensions other than its own today. It MUST be able to resolve an import of a
+  project language's source file to that file's compiled syntax tree.

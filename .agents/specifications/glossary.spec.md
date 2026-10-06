@@ -55,6 +55,22 @@ capitals.
   example `Published`). It carries a payload. Events are immutable and are the
   source of truth for an aggregate's state.
 - **Stream**: the ordered events of one aggregate.
+- **Version**: the number of events in a stream. Each event's version is its
+  position in the stream.
+- **Event record**: an appended event together with what the runtime records
+  with it: the aggregate's kind and identity, the event's version, and the time
+  it was recorded.
+- **Replay**: evolving an aggregate's initial state by each event in its stream,
+  in order. An aggregate's state is its replay.
+- **Entity**: a value inside an aggregate with an identity unique only within
+  that aggregate, such as a line of an order.
+- **Outcome**: how handling a command ends: accepted, with the events appended;
+  rejected, with a reason; or conflicted, when concurrent changes outlasted the
+  runtime's retries.
+- **Rejection**: a decision to refuse a command, with a reason. A rejection is a
+  normal business outcome, not an error.
+- **Conflict**: an append that failed because the stream's version changed after
+  the decision was made.
 - **Projection**: a read model built by applying events, from one or more
   streams, to an initial value. A projection can always be rebuilt from the
   events.
@@ -63,7 +79,8 @@ capitals.
 
 - **State machine**: a set of states, one of them the start state, with handlers
   for the commands and events each state accepts. State machines are the only
-  place a Coleslaw program branches.
+  place a Coleslaw program chooses what happens; patterns may still choose
+  values.
 - **State**: a named condition a state machine is in. A state may have entry and
   exit actions.
 - **Handler**: what a state does on receiving a command or an event.
@@ -73,6 +90,12 @@ capitals.
 - **Evolve**: handling an event. Given the current state and an event, evolving
   produces the next state: it may move to another state and set fields.
 - **Transition**: a move from one state to another, made while evolving.
+- **Start state**: the state a state machine begins in.
+- **Final state**: a state with no command handlers, in which every command is
+  rejected.
+- **Assertion**: a pattern a monitor requires an event and its own state to
+  match, with a message reported when they do not.
+- **Hot state**: a monitor state the program must not remain in forever.
 - **Monitor**: a state machine that observes events and asserts rules about
   them, without side effects, as P's `spec` machines do. A monitor's state may
   be marked hot, meaning the program must not stay in it forever.
@@ -90,16 +113,26 @@ capitals.
   until stopped.
 - **Job mode**: the mode that runs the one job its input names, then exits with
   that job's outcome.
+- **Events mode**: the mode that handles events from an event source, such as a
+  Kafka topic, through reactors until stopped.
 - **Application**: what startup constructs from the config for one mode: the
   services, managers, and entry points that mode reaches. The program is the
   source; an application is one running instance of it.
 - **Entry point**: how the outside world invokes managers: a controller's routes
-  in API mode, consumers in worker mode, or jobs in job mode.
+  in API mode, consumers in worker mode, jobs in job mode, or reactors in events
+  mode.
 
 ## Layers
 
-- **Manager**: a business operation, or a long-running business process, that
-  composes aggregates, projections, and services.
+- **Manager**: a business operation: it binds its inputs, loads an aggregate,
+  and progresses it with a command. Any further logic is one or more state
+  machines.
+- **Reactor**: a reaction to events, registered for them and expressed as state
+  machines, that progresses aggregates with commands. Depending on the config,
+  it runs in the process that appended the events or, in events mode, as an
+  entry point.
+- **Event source**: a service that delivers events to events mode, such as a
+  Kafka topic.
 - **Service**: a capability the program declares and the host program
   implements, such as sending email or charging a card. Services are the edge of
   the program.
