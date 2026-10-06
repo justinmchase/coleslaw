@@ -51,3 +51,56 @@ shape.
 - `jobs`: job declarations and their arguments.
 - `runtime`: storing aggregate state, recording and delivering events, and the
   retry bound.
+
+### Fundamental patterns
+
+Patterns common enough to every application that Coleslaw makes them constructs,
+so the language can constrain them, as it does state machines, managers, and
+services.
+
+- `errors`: errors as modeled data, not exceptions or logs. An error is bound to
+  an aggregate, stored with it, and can be queried and projected out to users. A
+  candidate home for reactions that fail every time.
+- `workflows`: long-running entities that are state machines the runtime
+  advances, not user code, until they reach a final state. Each has a progress:
+  a tree of branches and leaves as work fans out and back in, rolled up into
+  completed and total counts, plus progress content the program reports. Any
+  caller can learn a workflow's state.
+- `queries`: every operation that returns a set is paged, and every query is
+  limited. Nested sets are limited further, and how deep set queries nest is
+  limited explicitly, so payload sizes and query times stay bounded. Sorting and
+  filtering are declared, opt-in per operation, never available everywhere.
+  Iterating a whole collection is allowed only in modes suited to it, such as a
+  job, never while serving a request.
+- `timers`: deadlines and commands scheduled for later, such as escalating an
+  approval not decided within three days. Time comes from the clock service, so
+  a checker controls it.
+- `tenancy`: every aggregate, projection, and query scoped to a tenant, enforced
+  by the language rather than by remembering a filter.
+- `problems`: one standard response format, such as RFC 9457 problem details,
+  for refused input, rejections, conflicts, and failures, so every client reads
+  them the same way.
+- `deletion`: two fundamental states every aggregate's state machine has,
+  `Discarded` and `Removed`, entered only through handlers the aggregate
+  declares, so an aggregate that must never be deleted declares none.
+  `Discarded` is soft deletion: the stored state stays, projections and queries
+  hide it by default, other commands are rejected, and it MAY be restored.
+  `Removed` is hard deletion, reachable only from `Discarded`: it is final, and
+  the runtime erases the aggregate's fields, keeping a tombstone of its identity
+  and version so the identity cannot start over at version zero. Each move is an
+  ordinary command and event, so reactors see it.
+- `mocking`: replacing services, and giving aggregates and projections chosen
+  states, so a program's managers, reactors, and controllers can be tested
+  without real technologies.
+
+### Cross-cutting concerns
+
+- `extensions`: concerns that run through every program regardless of its code,
+  added to the runtime rather than written in the program: correlating each
+  command and event with the request, job, or event that caused it, auditing who
+  did what, and tracing.
+- `decorators`: attributes on declarations, as Uffda's decorators are, such as
+  `[Auditable]` on an event. A decorator attaches data to a declaration and does
+  no work itself; an extension reads that data and acts on it. So a program
+  chooses which declarations an extension applies to, without the extension's
+  behavior entering the program.
