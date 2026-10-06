@@ -43,6 +43,13 @@ patterns as its types and Uffda expressions as its expression language.
 - **Expressions are pure.** Expressions compute values and have no side effects.
   The only side effects in a program are the events aggregates emit and the
   calls managers and reactors make to services.
+- **Composition, not inheritance.** Reuse and extension MUST be by composition:
+  importing a declaration and using it, wrapping it, or listing it in something
+  larger, such as a context gathering members or a mode gathering entry points.
+  No declaration MAY inherit from, override, or reach into another. Where a
+  component is meant to be extended, it MUST say so with an explicit point of
+  composition, such as a service another module implements or an extension the
+  runtime accepts, rather than leaving its parts open to be replaced.
 - **One source of truth.** A Coleslaw program is the only definition of its
   domain. Compiled forms are build outputs, never edited and never treated as
   sources. Programs are text, so they version and merge like any other code.
