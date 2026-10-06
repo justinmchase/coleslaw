@@ -154,27 +154,34 @@ does not use them, and it may use different technologies.
   hybrid microservice mode pattern in TypeScript. It shows modes selected from
   the command line, an application context built from services, then
   repositories, then managers, and a job mode that runs one named job.
-- [Real Polite Protocol](https://github.com/justinmchase/real-polite-protocol),
-  an application built with Grove. Coleslaw MUST be able to express what it
-  does, including:
-  - **Config** read from the environment, with defaults, values derived from
-    other settings (such as a public domain computed from a hostname and port),
-    and defaults that depend on other settings or on where the process runs.
-  - **Middleware**: CORS, including unauthenticated preflight requests, and
-    bearer-token authentication that establishes the request's principal or
-    answers with an authentication challenge.
-  - **Controllers** that check requests before anything else happens: content
-    type and size limits, signature verification, freshness windows, and
-    rejecting duplicates, each failure answered with its own status and error
-    code.
-  - **Requests dispatched by shape**: different kinds of envelope, told apart by
-    their contents, routed to different handling.
-  - **Discovery endpoints**, such as OAuth protected-resource metadata.
-  - **Managers** per domain area (accounts, contacts, invitations, messages,
-    policies), composed of storage, authentication, and event services.
-  - **Migrations**, run before the application serves requests.
-  - **Domain errors** that map to responses.
-  - **Tools exposed over MCP** alongside the HTTP routes.
+- [Deploy Approval API](https://github.com/justinmchase/deploy-approval-api), an
+  application built with Grove that adds approval steps to GitHub deployments.
+  Coleslaw MUST be able to express what it does, including:
+  - **Config** read from the environment: required secrets (a GitHub App private
+    key, a database connection string), and optional settings with defaults (the
+    app id, the webhook path, the identity tenant and client).
+  - **Services** for technologies the implementor chooses: a GitHub App client
+    per installation, document storage, and a sign-in provider.
+  - **A middleware pipeline in order**: error handling, health checks, request
+    logging, static site and domain-verification files, the webhook, sign-in
+    that establishes the request's user, the authenticated routes, and a final
+    not-found response.
+  - **Webhooks** from another system, verified by signature, whose events start
+    business processes: a deployment awaiting protection rules starts an
+    approval.
+  - **Configuration read from the outside world** and checked against a shape:
+    each repository's approval file names the approval groups each environment
+    requires.
+  - **An approval process that is a state machine**: a deployment needs every
+    required group to approve; any rejection rejects it; with no groups
+    configured it is approved automatically; an approver may change their vote
+    only until the deployment is decided; and the final decision is reported
+    back to GitHub. Today this logic lives in a controller, which Coleslaw's
+    layers would not allow.
+  - **Routes with parameters checked against shapes**: an approval state that
+    must be `approved` or `rejected`, and paging with bounded `offset` and
+    `limit` and defaults.
+  - **Reads for the signed-in user**, such as the approvals awaiting them.
 
 ## Execution model
 
@@ -189,17 +196,11 @@ does not use them, and it may use different technologies.
 ## Open questions
 
 - **Choices that are not logic.** Patterns choose between alternatives, and
-  config needs choices such as "port 8000 on localhost, otherwise 443". Whether
-  such choices are written as pattern alternatives with projections, and how
-  that squares with state machines being the only logic, needs a precise rule:
-  for example, that patterns may classify values but only state machines may
-  decide behavior.
-- **MCP.** Whether tools exposed over MCP are another kind of entry point, or
-  routes of a kind within API mode.
-- **Migrations.** Whether migrations are jobs run by the deployment, as job mode
-  suggests, or a step of startup in every mode, as Real Polite Protocol does
-  today. With event-sourced aggregates they may matter mostly for projections.
-
+  config and shapes need choices such as "port 8000 on localhost, otherwise 443"
+  or "a missing group name defaults to the group's id". Whether such choices are
+  written as pattern alternatives with projections, and how that squares with
+  state machines being the only logic, needs a precise rule: for example, that
+  patterns may classify values but only state machines may decide behavior.
 - **Reacting to events.** Managers that react to one aggregate's events, to keep
   others eventually consistent, must run somewhere. Worker mode is the natural
   home, with events delivered to consumers through a queue; whether they may
