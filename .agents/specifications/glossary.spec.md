@@ -77,7 +77,21 @@ capitals.
   them, without side effects, as P's `spec` machines do. A monitor's state may
   be marked hot, meaning the program must not stay in it forever.
 
-## Application
+## Running
+
+- **Input**: what a process starts with: its command-line arguments, its
+  environment variables, and, if one is named, a config file.
+- **Config**: the settings a process runs with, parsed from its input by
+  matching it against the program's config declaration.
+- **Mode**: one way a program can run, such as serving an API or running jobs. A
+  program declares its modes, and each process runs exactly one.
+- **Application**: what startup constructs from the config for one mode: the
+  services, managers, and entry points that mode reaches. The program is the
+  source; an application is one running instance of it.
+- **Entry point**: how the outside world invokes managers: a controller's routes
+  in API mode, or jobs in job mode.
+
+## Layers
 
 - **Manager**: a business operation, or a long-running business process, that
   composes aggregates, projections, and services.
@@ -85,6 +99,9 @@ capitals.
   implements, such as sending email or charging a card. Services are the edge of
   the program.
 - **Controller**: a set of routes by which the outside world invokes managers.
+- **Job**: a named unit of work that invokes managers, run in job mode from the
+  command line or on a schedule. Its arguments are matched against a pattern,
+  like any other input.
 - **Route**: a binding from an external request, such as an HTTP method and
   path, to a manager.
 - **Middleware**: a step that runs around a controller's routes, such as logging

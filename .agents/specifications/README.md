@@ -8,7 +8,8 @@ statements.
 ## Chapters
 
 - [Overview](./overview.spec.md): what Coleslaw is for, its principles, its
-  layers and what each may call, and how programs run.
+  layers and what each may call, how a process starts, its modes, and how
+  programs run.
 - [Glossary](./glossary.spec.md): the vocabulary every other chapter, and the
   language's keywords, use.
 
@@ -22,6 +23,12 @@ shape.
 - `expressions`: the embedded Uffda expression language.
 - `aggregates/`: aggregates, fields, commands, events, state machines,
   projections, relationships, and monitors.
+- `config`: the config declaration, input sources and their precedence, and
+  parsing input into config.
+- `startup`: the pipeline from config to an application.
+- `modes`: declaring modes, selecting one, and what each mode constructs and
+  runs.
 - `managers` and `services`: composition, and the host-implemented edge.
 - `controllers/`: routes, authentication, authorization, and middleware.
+- `jobs`: job declarations, their arguments, and schedules.
 - `runtime`: command transactions, event storage, ordering, and determinism.

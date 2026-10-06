@@ -15,8 +15,9 @@ capitals.
 Coleslaw is a language for writing business applications: the web, CRUD, and
 line-of-business systems whose value lies in their domain rules rather than in
 their infrastructure. A Coleslaw program declares a domain (its aggregates), the
-business operations over it (its managers), and the ways the outside world
-reaches it (its controllers). The Coleslaw runtime executes that program.
+business operations over it (its managers), the ways the outside world reaches
+it (its controllers and jobs), its configuration, and the modes it can run in.
+The Coleslaw runtime executes that program in one mode per process.
 
 Coleslaw is built with Uffda: its grammar is a Uffda language, and it uses Uffda
 patterns as its types and Uffda expressions as its expression language.
@@ -46,7 +47,9 @@ patterns as its types and Uffda expressions as its expression language.
 
 | Layer      | Holds                                                                | May use                           |
 | ---------- | -------------------------------------------------------------------- | --------------------------------- |
+| Config     | The settings a process runs with, parsed from its input              | Patterns and expressions only     |
 | Controller | Routes, authentication, authorization, middleware                    | Managers                          |
+| Job        | A named unit of work run from the command line or a schedule         | Managers                          |
 | Manager    | Business operations and long-running processes                       | Aggregates, projections, services |
 | Aggregate  | Identity, fields, commands, events, a state machine, invariants      | Patterns and expressions only     |
 | Projection | A read model derived from events                                     | Patterns and expressions only     |
@@ -54,8 +57,8 @@ patterns as its types and Uffda expressions as its expression language.
 
 ## Dependency rules
 
-- A controller MUST reach the domain only through managers. It MUST NOT send
-  commands to aggregates, read projections, or call services directly.
+- Controllers and jobs MUST reach the domain only through managers. They MUST
+  NOT send commands to aggregates, read projections, or call services directly.
 - A manager MUST be a composition: it sends commands to aggregates, reads
   projections, and calls services. Any branching in a manager MUST be a state
   machine, as everywhere else.
@@ -68,6 +71,50 @@ patterns as its types and Uffda expressions as its expression language.
 - One command changes one aggregate. Consistency across aggregates is eventual:
   a manager reacts to one aggregate's events by sending commands to others.
 - A service MUST NOT call back into the program's layers.
+- Config MUST NOT depend on any other layer. Services, and through them the rest
+  of the application, are constructed from config.
+
+## Startup
+
+Starting a process is itself a pipeline, with the program's declarations as its
+stages:
+
+1. **Input.** The runtime gathers the process's input: its command-line
+   arguments, its environment variables, and, if one is named, a config file.
+2. **Config.** The input is parsed into the program's config, by matching it
+   against the config declaration. Input that does not match MUST stop the
+   process before anything else is constructed, with a diagnostic naming what
+   did not match.
+3. **Application.** From the config, the pipeline constructs the application:
+   the services, then the managers composed of them, then the controllers or
+   jobs that reach those managers.
+4. **Run.** The application is handed to the runtime, which runs it as the
+   selected mode.
+
+- Each stage MUST depend only on the stages before it.
+- Startup MUST be free of side effects other than constructing services. In
+  particular, no command is handled and no request is served until the run
+  stage.
+
+## Modes
+
+A mode is one way a program can run, such as serving an API or running jobs.
+This follows the mode pattern of a
+[hybrid microservice](https://justinmchase.com/2023/03/11/hybrid-microservice-architecture/):
+one program declares every mode it can run in, and each process runs exactly one
+of them.
+
+- A program MUST declare the modes it supports, and its input MUST select
+  exactly one.
+- Each mode determines which entry points exist. Controllers MUST exist only in
+  API mode; jobs MUST exist only in job mode.
+- The runtime MUST construct only what the selected mode reaches: its entry
+  points, the managers they use, and the services those managers use. A service
+  no entry point of the mode reaches MUST NOT be constructed, so a process never
+  needs the configuration of, or a connection to, a service it does not use.
+- Every mode runs the same program. Processes running different modes of one
+  program MAY therefore share the program's storage, such as its event streams,
+  directly: they cannot disagree about its shape.
 
 ## Execution model
 
@@ -80,6 +127,17 @@ patterns as its types and Uffda expressions as its expression language.
   always be rebuilt from them.
 
 ## Open questions
+
+- **Which modes.** API and job modes are certain. Others the mode pattern names,
+  such as a stream handler or a serverless function, are not yet decided.
+- **Reacting to events.** Managers that react to one aggregate's events, to keep
+  others eventually consistent, must run somewhere: in the process that emitted
+  the events, in a dedicated mode, or both.
+- **Input precedence.** When the command line, the environment, and a config
+  file all supply a setting, which wins. The conventional order is command line,
+  then environment, then file.
+- **Schedules.** Whether a job's schedule is declared in the program or left to
+  whatever runs the process, such as cron.
 
 - **Branching in managers.** Whether every manager operation is a state machine,
   or only those that branch or wait, with straight-line operations written as
