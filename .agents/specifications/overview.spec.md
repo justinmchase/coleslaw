@@ -49,17 +49,17 @@ patterns as its types and Uffda expressions as its expression language.
 
 ## Layers
 
-| Layer      | Holds                                                                | May use                           |
-| ---------- | -------------------------------------------------------------------- | --------------------------------- |
-| Config     | The settings a process runs with, parsed from its input              | Patterns and expressions only     |
-| Controller | Routes, authentication, authorization, middleware                    | Managers, projections             |
-| Consumer   | The handling of messages from a queue                                | Managers                          |
-| Job        | A named unit of work that runs once                                  | Managers                          |
-| Manager    | Business operations: bind inputs, load an aggregate, progress it     | Aggregates, projections, services |
-| Reactor    | Reactions to events, as state machines                               | Aggregates, projections, services |
-| Aggregate  | Identity, fields, commands, events, a state machine, invariants      | Patterns and expressions only     |
-| Projection | A read model derived from aggregates' stored state                   | Patterns and expressions only     |
-| Service    | A declared capability whose implementation the host program provides | Nothing in the program            |
+| Layer      | Holds                                                                | May use                                              |
+| ---------- | -------------------------------------------------------------------- | ---------------------------------------------------- |
+| Config     | The settings a process runs with, parsed from its input              | Patterns and expressions only                        |
+| Controller | Routes, authentication, authorization, middleware                    | Managers, projections                                |
+| Consumer   | The handling of messages from a queue                                | Managers                                             |
+| Job        | A named unit of work that runs once                                  | Managers                                             |
+| Manager    | Business operations: bind inputs, send one aggregate a command       | One aggregate, projections, service queries          |
+| Reactor    | Reactions to events, as state machines                               | Aggregates, projections, service queries and effects |
+| Aggregate  | Identity, fields, commands, events, a state machine, invariants      | Patterns and expressions only                        |
+| Projection | A read model derived from aggregates' stored state                   | Patterns and expressions only                        |
+| Service    | A declared capability whose implementation the host program provides | Nothing in the program                               |
 
 ## Dependency rules
 
@@ -67,12 +67,16 @@ patterns as its types and Uffda expressions as its expression language.
   They MUST NOT send commands to aggregates or call services directly.
 - Controllers MAY read projections directly. Consumers and jobs read through
   managers.
-- A manager operation binds its inputs, loads the aggregate it concerns, and
-  progresses it by sending it a command. Any logic a manager needs beyond that
-  MUST be expressed as one or more state machines.
+- A manager operation binds its input, chooses the aggregate it concerns, and
+  progresses it by sending it at most one command. Any logic it needs beyond
+  that MUST be expressed as a state machine that lasts for the invocation (see
+  [managers](./managers.spec.md)).
 - A reactor is registered for events, and its logic MUST be expressed as one or
   more state machines. Like a manager, it progresses aggregates by sending them
   commands, and it MAY read projections and call services.
+- Service operations are queries or effects. Managers and reactors MAY call
+  queries; only reactors MAY call effects, so the world changes only after the
+  program has (see [services](./services.spec.md)).
 - A reactor MUST NOT run inside the transaction of the command whose event it
   reacts to. Each reaction is its own transaction, so one command still changes
   one aggregate.
@@ -173,6 +177,8 @@ message broker.
   declared service, configured from the program's config.
 - Values crossing a service boundary MUST match the patterns the declaration
   gives, in both directions.
+- The [services](./services.spec.md) chapter defines declarations, queries and
+  effects, and the clock and identity services Coleslaw provides.
 
 ## Reference applications
 
@@ -259,8 +265,9 @@ checker itself will come later; the language MUST stay checkable now.
 - Everything else MUST be deterministic, so that a run is reproduced exactly by
   replaying the same choices at those edges.
 - A feature that would hide a source of variation inside the program, such as
-  reading the clock or generating an identity outside a command, MUST NOT be
-  added.
+  reading the clock or generating an identity other than through a service, MUST
+  NOT be added. The time and new identities come from services Coleslaw
+  provides, which a checker can replace.
 
 ## Uffda prerequisites
 
