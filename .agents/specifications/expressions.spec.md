@@ -65,6 +65,19 @@ provides its own set, rather than inheriting Uffda's.
 
 ## Equality
 
+Most comparisons in a program are patterns: a handler's guard, a shape, or an
+alternative that matches a literal. Matching a value against a pattern compares
+it deeply, part by part, and names what failed when it does not match.
+
+- A comparison SHOULD be written as a pattern wherever a pattern can express it,
+  such as a command handler guarded by `{ status: "open" }`. `eq` and `deep` are
+  for comparisons a pattern cannot express.
+- Uffda's `$name` pattern, which matches a value equal to a value in scope,
+  compares by identity, as `eq` does. Matching an object against `$name` bound
+  to another object is therefore true only when they are the same object. To
+  compare two objects by value, a pattern matches their parts, as
+  `{ currency: $currency, amount: $amount }` does against primitives in scope,
+  or an expression uses `deep`.
 - `(eq x y)` MUST be identity: true when `x` and `y` are the same primitive
   value, as JavaScript's `===` decides, or the same object.
 - `(deep x y)` MUST be data equality: true when `x` and `y` are equal as
