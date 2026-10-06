@@ -117,18 +117,24 @@ capitals.
 ## Running
 
 - **Input**: what a process starts with: its command-line arguments, its
-  environment variables, and, if one is named, a config file.
+  environment variables, and any sources extensions add.
 - **Config**: the settings a process runs with, parsed from its input by
   matching it against the program's config declaration.
-- **Mode**: one way a program can run. A program declares its modes, and each
-  process runs exactly one.
-- **API mode**: the mode that serves requests through controllers until stopped.
-- **Worker mode**: the mode that handles messages from queues through consumers
+- **Setting**: one named value of the config, with a shape, taken from the
+  command line, the environment, or a source an extension adds.
+- **Mode**: one way a program can run: a named declaration of one kind, listing
+  the entry points it runs. A program declares one or more modes, one of them
+  the default, and each process runs exactly one.
+- **API mode**: a mode of the kind that serves requests through controllers
   until stopped.
-- **Job mode**: the mode that runs the one job its input names, then exits with
-  that job's outcome.
-- **Events mode**: the mode that handles events from an event source, such as a
-  Kafka topic, through reactors until stopped.
+- **Worker mode**: a mode of the kind that handles messages from queues through
+  consumers until stopped.
+- **Job mode**: a mode of the kind that runs the one job its input names, then
+  exits with that job's outcome.
+- **Events mode**: a mode of the kind that handles events from an event source,
+  such as a Kafka topic, through reactors until stopped.
+- **Implementation**: a module that implements a service declaration for a
+  particular technology. The config chooses which implementation a process uses.
 - **Application**: what startup constructs from the config for one mode: the
   services, managers, and entry points that mode reaches. The program is the
   source; an application is one running instance of it.
