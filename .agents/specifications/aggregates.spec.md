@@ -88,14 +88,15 @@ it is not part of the program's working state.
   this possible: a process that stops between saving and delivering delivers
   them when it resumes.
 - Once an event has been delivered to everything that observes it, the runtime
-  MAY discard it, or MAY archive it, for example for auditing or backups.
-- Nothing in a program MAY read an event after it has been delivered, whether or
-  not it is archived. An archive is outside the program.
-- In normal operation, aggregates MUST NOT be restored by replaying events: they
-  are loaded from their stored state. To repeat the effect of an event, a
-  manager or reactor sends another command, which emits another event.
-- Restoring stored states from archived events is a recovery measure for extreme
-  cases, such as lost storage, and is not part of how a program runs.
+  MAY discard it. Nothing in a program MAY read an event after it has been
+  delivered.
+- Keeping events, for example for auditing or backups, is an ordinary reaction:
+  a reactor the program declares, which passes events to a service the
+  implementor provides. Coleslaw does not specify where or how events are kept,
+  or how they might be used to recover.
+- Aggregates MUST NOT be restored by replaying events: they are loaded from
+  their stored state. To repeat the effect of an event, a manager or reactor
+  sends another command, which emits another event.
 
 ## Concurrency
 
@@ -132,7 +133,3 @@ each other, and conflicts are detected when the new state is saved.
   states, or invariants brings existing stored states along, and what happens to
   a stored state the new program does not accept (see
   [fields](./aggregates/fields.spec.md#invariants)).
-- **Archives and recovery.** Whether Coleslaw specifies archiving events, and
-  tools for auditing an archive or recovering stored states from one, given that
-  evolving an archived event with a later version of the program may not give
-  the state the earlier version saved.
