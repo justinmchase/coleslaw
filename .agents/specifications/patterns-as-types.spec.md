@@ -93,6 +93,11 @@ connection, a stream, or a handle from a host library.
   infinities, and negative zero.
 - An object key whose value is `undefined` MAY be dropped when stored, since a
   missing key is treated alike.
+- Materialized data MUST be a tree: whenever the runtime gives a program data,
+  from storage, from delivery, or from a store kept in memory, no object in it
+  is shared between two places. A store kept in memory MUST therefore copy data
+  when it saves and when it loads, as one that writes elsewhere does in effect.
+  Otherwise whether two values are the same object would depend on the store.
 - How data is encoded is the runtime's choice, specified in the runtime chapter.
   An encoding that loses a type, such as writing a map as an array or a bigint
   as a string with nothing to say it was one, does not satisfy this chapter.
@@ -100,7 +105,8 @@ connection, a stream, or a handle from a host library.
 ## Equality
 
 Value objects are equal when their values are equal, and repeats of an event
-must be recognizable, so data has one equality.
+must be recognizable, so data has an equality of its own, independent of which
+objects hold it.
 
 - Two values of data MUST be equal when they are the same type and:
   - primitives: are the same value, with `NaN` equal to itself;
@@ -109,7 +115,10 @@ must be recognizable, so data has one equality.
   - plain objects: have the same keys, ignoring order, with equal values;
   - maps: have the same keys, ignoring order, with equal values;
   - sets: have the same members, ignoring order.
-- Every comparison of data in a program MUST use this equality.
+- The runtime MUST use this equality wherever it compares data, such as
+  recognizing a repeated event. Expressions compare data this way with `deep`,
+  and compare identity with `eq` (see
+  [expressions](./expressions.spec.md#equality)).
 
 ## Value objects
 

@@ -41,6 +41,10 @@ capitals.
   objects are equal when their values are equal. Value objects are immutable.
 - **Expression**: a Uffda expression. Expressions compute values and have no
   side effects.
+- **Func**: a named expression declared in a module, with a pattern its
+  arguments must match.
+- **Core function**: a function Coleslaw provides to every expression, such as
+  `eq` or `deep`. Core functions are pure, and a program cannot add to them.
 
 ## Domain
 
@@ -71,8 +75,9 @@ capitals.
 - **Entity**: a value inside an aggregate with an identity unique only within
   that aggregate, such as a line of an order.
 - **Outcome**: how handling a command ends: accepted, with the new state saved
-  and its events recorded; rejected, with a reason; or conflicted, when
-  concurrent changes outlasted the runtime's retries.
+  and its events recorded; rejected, with a reason; conflicted, when concurrent
+  changes outlasted the runtime's retries; or failed, with an error, when
+  handling met a defect in the program.
 - **Rejection**: a decision to refuse a command, with a reason. A rejection is a
   normal business outcome, not an error.
 - **Conflict**: a save that failed because the aggregate's stored version
