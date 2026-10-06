@@ -80,12 +80,15 @@ services.
 - `problems`: one standard response format, such as RFC 9457 problem details,
   for refused input, rejections, conflicts, and failures, so every client reads
   them the same way.
-- `deletion`: hard and soft delete as fundamental states of an aggregate's state
-  machine: final states declared as kept, whose stored state stays but which
-  projections and queries hide by default, or removed, whose stored state the
-  runtime deletes. Deleting is an ordinary command and event, so reactors see
-  it. Includes whether a removed aggregate leaves a tombstone, so its identity
-  cannot silently start over at version zero.
+- `deletion`: two fundamental states every aggregate's state machine has,
+  `Discarded` and `Removed`, entered only through handlers the aggregate
+  declares, so an aggregate that must never be deleted declares none.
+  `Discarded` is soft deletion: the stored state stays, projections and queries
+  hide it by default, other commands are rejected, and it MAY be restored.
+  `Removed` is hard deletion, reachable only from `Discarded`: it is final, and
+  the runtime erases the aggregate's fields, keeping a tombstone of its identity
+  and version so the identity cannot start over at version zero. Each move is an
+  ordinary command and event, so reactors see it.
 - `mocking`: replacing services, and giving aggregates and projections chosen
   states, so a program's managers, reactors, and controllers can be tested
   without real technologies.
