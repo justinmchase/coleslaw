@@ -53,9 +53,8 @@ capitals.
   example `Publish`). It carries a payload, and it may be rejected.
 - **Event**: a fact about a change that happened, named in the past tense (for
   example `Published`). It carries a payload. Every change to an aggregate is
-  described by an event, which is delivered to what observes it. After that it
-  may be archived, for auditing or backups, but it is no longer part of the
-  program's working state. Events are immutable.
+  described by an event, which is delivered to what observes it and is then no
+  longer part of the program's working state. Events are immutable.
 - **Stored state**: an aggregate's machine state and version, as saved by its
   last accepted command. It is the source of truth for the aggregate.
 - **Version**: the number of events that have changed an aggregate. Each event's
