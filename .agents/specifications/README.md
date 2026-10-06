@@ -25,6 +25,8 @@ statements.
     events.
   - [Monitors](./aggregates/monitors.spec.md): observers that assert rules about
     events.
+- [Patterns as types](./patterns-as-types.spec.md): shapes, closed objects, the
+  values a program may store, equality, and value objects.
 
 ## Planned chapters
 
@@ -32,7 +34,6 @@ These are not written yet. They are listed so that new chapters fit the intended
 shape.
 
 - `modules`: files, bounded contexts, and imports.
-- `patterns-as-types`: fields, payloads, and value objects as Uffda patterns.
 - `expressions`: the embedded Uffda expression language.
 - `config`: the config declaration, input sources and their precedence, and
   parsing input into config.

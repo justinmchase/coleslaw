@@ -28,9 +28,15 @@ capitals.
 
 ## Shapes and values
 
-- **Pattern**: a Uffda pattern. Coleslaw uses patterns as its types: a value has
-  a shape when it matches the pattern.
-- **Value object**: a named pattern for a domain value with no identity of its
+- **Pattern**: a Uffda pattern. Coleslaw uses patterns as its types.
+- **Shape**: a pattern used as a type, such as a field's or a payload's. A value
+  has a shape when the shape's pattern matches it, and the value used is the
+  value the pattern produces.
+- **Data**: a value that survives being stored and read back unchanged:
+  `undefined`, `null`, booleans, numbers, bigints, strings, dates, and arrays,
+  plain objects, maps, and sets made of data. Everything a program stores is
+  data.
+- **Value object**: a named shape for a domain value with no identity of its
   own, such as an email address, an amount of money, or a date range. Two value
   objects are equal when their values are equal. Value objects are immutable.
 - **Expression**: a Uffda expression. Expressions compute values and have no
