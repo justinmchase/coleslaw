@@ -220,9 +220,6 @@ does not use them, and it may use different technologies.
 
 ## Open questions
 
-- **Where a reactor runs.** Whether a reactor's declaration says it runs in the
-  same process or in events mode, or the config decides, so one program can be
-  deployed either way.
 - **Delivery.** Event sources such as Kafka usually deliver an event at least
   once, so a reactor may see the same event twice. Whether the runtime
   guarantees each reaction happens once, or reactors must tolerate repeats.
