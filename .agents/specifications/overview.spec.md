@@ -227,8 +227,10 @@ does not use them, and it may use different technologies.
 Coleslaw follows the same strategy as Uffda, and reuses Uffda's modules for it
 wherever it can.
 
-- Coleslaw's grammar MUST be a Uffda language, declaring Coleslaw's file
-  extension, so Uffda's tools can find and parse Coleslaw source.
+- Coleslaw source files MUST use the extension `.clsw`. (The earlier `.cls` is
+  already claimed by LaTeX classes, VBA class modules, and Apex classes.)
+- Coleslaw's grammar MUST be a Uffda language, declaring the `.clsw` extension,
+  so Uffda's tools can find and parse Coleslaw source.
 - Compiling a program MUST parse each source file with that grammar and write
   its syntax tree as JSON to the project's output directory (`./bin` by
   default), at the path Uffda's artifact layout gives it.
@@ -272,8 +274,3 @@ Uffda, specified there, before the Coleslaw chapters that depend on them:
 - **Resolving other languages.** Uffda's module resolution rejects file
   extensions other than its own today. It MUST be able to resolve an import of a
   project language's source file to that file's compiled syntax tree.
-
-## Open questions
-
-- **File extension.** Coleslaw's earlier implementation used `.cls`, which is
-  also used by LaTeX classes and VBA.
