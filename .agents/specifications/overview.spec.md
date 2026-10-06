@@ -240,6 +240,24 @@ wherever it can.
 - Compiled syntax trees are build outputs: never edited, never committed, and
   always reproducible from the source.
 
+## Checkability
+
+Coleslaw programs are meant to be checked systematically, the way the P language
+checks its machines: by running a program many times while varying everything
+outside its control, and checking its monitors after each run. Such a check
+finds failures that occur only in particular orderings, such as two reactions
+racing or a repeated event, which neither parsing nor matching can find. The
+checker itself will come later; the language MUST stay checkable now.
+
+- Every source of variation MUST be explicit at the program's edges: the
+  commands that arrive and their order, what services return, and how events are
+  delivered to reactors, including repeats.
+- Everything else MUST be deterministic, so that a run is reproduced exactly by
+  replaying the same choices at those edges.
+- A feature that would hide a source of variation inside the program, such as
+  reading the clock or generating an identity outside a command, MUST NOT be
+  added.
+
 ## Uffda prerequisites
 
 Uffda does not yet do everything this chapter assumes. These changes belong in
@@ -257,8 +275,5 @@ Uffda, specified there, before the Coleslaw chapters that depend on them:
 
 ## Open questions
 
-- **Checking programs.** Because all logic lives in state machines, programs
-  could be explored systematically the way P checks its machines, including
-  monitors that must not remain in a hot state.
 - **File extension.** Coleslaw's earlier implementation used `.cls`, which is
   also used by LaTeX classes and VBA.
