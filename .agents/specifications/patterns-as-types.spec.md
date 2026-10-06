@@ -51,8 +51,9 @@ would be accepted, written into an event, and kept forever.
 
 ## Data
 
-Fields, payloads, and projections are stored and replayed, so the values they
-hold must survive storage unchanged. Data is the set of values that can.
+Fields and projections are stored and loaded again, and event payloads are
+recorded and delivered, often to another process, so the values they hold must
+survive storage unchanged. Data is the set of values that can.
 
 - Data MUST consist of:
   - `undefined`, `null`, booleans, numbers, bigints, and strings;
