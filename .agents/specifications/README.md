@@ -51,3 +51,24 @@ shape.
 - `jobs`: job declarations and their arguments.
 - `runtime`: storing aggregate state, recording and delivering events, and the
   retry bound.
+
+### Fundamental patterns
+
+Patterns common enough to every application that Coleslaw makes them constructs,
+so the language can constrain them, as it does state machines, managers, and
+services.
+
+- `errors`: errors as modeled data, not exceptions or logs. An error is bound to
+  an aggregate, stored with it, and can be queried and projected out to users. A
+  candidate home for reactions that fail every time.
+- `workflows`: long-running entities that are state machines the runtime
+  advances, not user code, until they reach a final state. Each has a progress:
+  a tree of branches and leaves as work fans out and back in, rolled up into
+  completed and total counts, plus progress content the program reports. Any
+  caller can learn a workflow's state.
+- `queries`: every operation that returns a set is paged, and every query is
+  limited. Nested sets are limited further, and how deep set queries nest is
+  limited explicitly, so payload sizes and query times stay bounded. Sorting and
+  filtering are declared, opt-in per operation, never available everywhere.
+  Iterating a whole collection is allowed only in modes suited to it, such as a
+  job, never while serving a request.
