@@ -145,6 +145,11 @@ of them.
 - Either way, reactions follow the same rules: each runs after the events it
   reacts to are appended, as its own transaction, and the program cannot tell
   which way it is running.
+- Events are delivered to reactors at least once. The runtime MUST NOT promise
+  more, whichever way reactors run and whatever an event source offers, and a
+  reactor MUST give the same result when it receives an event it has already
+  handled. An event is identified by its aggregate's kind and identity and its
+  version, so a repeat can always be recognized.
 - A job's schedule is not part of the program. Whatever starts the process, such
   as cron or a deployment's migration step, decides when a job runs.
 - The runtime MUST construct only what the selected mode reaches: its entry
@@ -210,21 +215,50 @@ does not use them, and it may use different technologies.
 
 ## Execution model
 
-- Coleslaw programs are interpreted. The runtime, built on the Uffda runtime,
-  executes compiled modules directly. Code generation MAY be added later as an
-  additional transformation, but running a program MUST NOT require it.
+- Coleslaw programs are interpreted: the runtime, built on the Uffda runtime,
+  interprets compiled syntax trees. Coleslaw does not generate code.
 - Aggregates are event-sourced. An aggregate's events are the source of truth
   for its state: the state is what results from applying each event, in order,
   to the aggregate's initial state. Projections are derived from events and can
   always be rebuilt from them.
 
+## Compilation
+
+Coleslaw follows the same strategy as Uffda, and reuses Uffda's modules for it
+wherever it can.
+
+- Coleslaw's grammar MUST be a Uffda language, declaring Coleslaw's file
+  extension, so Uffda's tools can find and parse Coleslaw source.
+- Compiling a program MUST parse each source file with that grammar and write
+  its syntax tree as JSON to the project's output directory (`./bin` by
+  default), at the path Uffda's artifact layout gives it.
+- An import of one Coleslaw file from another MUST resolve, through Uffda's
+  module resolution, to the imported file's compiled syntax tree. Source is
+  never parsed when a program runs.
+- The runtime MUST run only compiled syntax trees, interpreting them according
+  to the selected mode.
+- Compiled syntax trees are build outputs: never edited, never committed, and
+  always reproducible from the source.
+
+## Uffda prerequisites
+
+Uffda does not yet do everything this chapter assumes. These changes belong in
+Uffda, specified there, before the Coleslaw chapters that depend on them:
+
+- **Publishing its languages.** Uffda MUST publish its pattern and expression
+  grammars, and what lowers them to runtime patterns and expressions, so that
+  Coleslaw's grammar can import them.
+- **Compiling other languages.** Uffda's compile emits only Uffda module
+  declarations today. It MUST be able to compile a source file of a project
+  language with that language's grammar, and write that language's syntax tree.
+- **Resolving other languages.** Uffda's module resolution rejects file
+  extensions other than its own today. It MUST be able to resolve an import of a
+  project language's source file to that file's compiled syntax tree.
+
 ## Open questions
 
-- **Delivery.** Event sources such as Kafka usually deliver an event at least
-  once, so a reactor may see the same event twice. Whether the runtime
-  guarantees each reaction happens once, or reactors must tolerate repeats.
 - **Checking programs.** Because all logic lives in state machines, programs
   could be explored systematically the way P checks its machines, including
   monitors that must not remain in a hot state.
-- **Code generation.** Which targets, if any, and how their templates are
-  versioned and changed.
+- **File extension.** Coleslaw's earlier implementation used `.cls`, which is
+  also used by LaTeX classes and VBA.
