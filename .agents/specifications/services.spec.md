@@ -100,8 +100,6 @@ match its shape.
 
 - **Identity format.** What the provided identity service returns: a string in
   one standard format, or a shape the program chooses.
-- **Calls that always fail.** An event whose reaction fails every time is
-  delivered forever. How the runtime notices it, and where such an event goes.
 - **Streams and long results.** Whether a query may return a sequence too long
   to hold at once, such as every record in a table, and how a manager consumes
   it.

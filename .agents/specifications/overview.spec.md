@@ -78,8 +78,8 @@ patterns as its types and Uffda expressions as its expression language.
   queries; only reactors MAY call effects, so the world changes only after the
   program has (see [services](./services.spec.md)).
 - A reactor MUST NOT run inside the transaction of the command whose event it
-  reacts to. Each reaction is its own transaction, so one command still changes
-  one aggregate.
+  reacts to. Each command a reaction sends is its own transaction, so one
+  command still changes one aggregate (see [reactors](./reactors.spec.md)).
 - An aggregate MUST NOT call managers, services, or other aggregates. It refers
   to another aggregate only by that aggregate's identity.
 - An aggregate's handling of a command MUST be deterministic: given the same
@@ -146,9 +146,9 @@ of them.
   - **In process.** The process that saved the events runs the reactors itself,
     with no event source. This suits running locally, with the whole program in
     one process and its storage in memory.
-- Either way, reactions follow the same rules: each runs after the events it
-  reacts to are saved, as its own transaction, and the program cannot tell which
-  way it is running.
+- Either way, reactions follow the same rules: each runs after the event it
+  reacts to is saved, events reach each reactor in each aggregate's order, and
+  the program cannot tell which way it is running.
 - Events are delivered to reactors at least once. The runtime MUST NOT promise
   more, whichever way reactors run and whatever an event source offers, and a
   reactor MUST give the same result when it receives an event it has already

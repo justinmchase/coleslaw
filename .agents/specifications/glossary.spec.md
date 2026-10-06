@@ -138,10 +138,11 @@ capitals.
 - **Operation**: one business operation of a manager: it binds its input and
   progresses one aggregate with at most one command. Any further logic is a
   state machine that lasts for the invocation and is never stored.
-- **Reactor**: a reaction to events, registered for them and expressed as state
-  machines, that progresses aggregates with commands. Depending on the config,
-  it runs in the process that saved the events or, in events mode, as an entry
-  point.
+- **Reactor**: a declaration that reacts to events by sending commands and
+  calling services. Depending on the config, it runs in the process that saved
+  the events or, in events mode, as an entry point.
+- **Reaction**: one reactor handling one event, by a state machine that lasts
+  for the reaction and is never stored. A failed reaction is run again.
 - **Event source**: a service that delivers events to events mode, such as a
   Kafka topic.
 - **Service**: a capability the program declares and the host program
