@@ -12,6 +12,19 @@ statements.
   programs run.
 - [Glossary](./glossary.spec.md): the vocabulary every other chapter, and the
   language's keywords, use.
+- [Aggregates](./aggregates.spec.md): what an aggregate is, handling a command,
+  outcomes, and optimistic concurrency.
+  - [Fields](./aggregates/fields.spec.md): state and invariants.
+  - [Commands and events](./aggregates/commands-and-events.spec.md):
+    declarations, payloads, and event records.
+  - [State machines](./aggregates/state-machines.spec.md): states, deciding, and
+    evolving.
+  - [Relationships](./aggregates/relationships.spec.md): references by identity,
+    and entities within an aggregate.
+  - [Projections](./aggregates/projections.spec.md): read models built from
+    events.
+  - [Monitors](./aggregates/monitors.spec.md): observers that assert rules about
+    events.
 
 ## Planned chapters
 
@@ -21,8 +34,6 @@ shape.
 - `modules`: files, bounded contexts, and imports.
 - `patterns-as-types`: fields, payloads, and value objects as Uffda patterns.
 - `expressions`: the embedded Uffda expression language.
-- `aggregates/`: aggregates, fields, commands, events, state machines,
-  projections, relationships, and monitors.
 - `config`: the config declaration, input sources and their precedence, and
   parsing input into config.
 - `startup`: the pipeline from config to an application.
@@ -32,4 +43,4 @@ shape.
 - `controllers/`: routes, authentication, authorization, and middleware.
 - `consumers`: queues, messages, and binding them to managers.
 - `jobs`: job declarations and their arguments.
-- `runtime`: command transactions, event storage, ordering, and determinism.
+- `runtime`: event storage, ordering across streams, and the retry bound.

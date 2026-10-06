@@ -209,8 +209,6 @@ does not use them, and it may use different technologies.
   plain compositions.
 - **Queries.** Whether controllers may read projections directly, as many
   read-heavy applications want, or must always go through a manager.
-- **Concurrency.** How the runtime detects two commands racing on the same
-  aggregate (for example, by the version of its event stream).
 - **Checking programs.** Because all logic lives in state machines, programs
   could be explored systematically the way P checks its machines, including
   monitors that must not remain in a hot state.
