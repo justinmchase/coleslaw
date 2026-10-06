@@ -3,8 +3,7 @@
 This chapter defines an aggregate's state machine: its states, its handlers, and
 how it decides commands and evolves on events. Its shape borrows from the P
 language's machines; its split into deciding and evolving follows the Decider
-pattern of functional event sourcing. Terms are defined in the
-[glossary](../glossary.spec.md).
+pattern. Terms are defined in the [glossary](../glossary.spec.md).
 
 ## Conventions
 
@@ -23,15 +22,14 @@ capitals.
 - **Decision**: the result of a command handler: either a rejection with a
   reason, or a sequence of zero or more events.
 - **Evolution**: the result of an event handler: the next machine state.
-- **Replay**: evolving the initial machine state by each event of a stream, in
-  order.
 
 ## Axioms
 
-- A stream is append-only. An event, once appended, is never changed or removed.
-- A stream outlives the version of the program that wrote it: events written by
-  an earlier version are replayed by later versions.
-- The state of an aggregate is its replay. Nothing else is stored as truth.
+- An aggregate's stored machine state is the truth about it.
+- Every change to that state is described by an event, and every event is
+  delivered to the parts of the program that observe it.
+- A stored state outlives the version of the program that saved it: states saved
+  by an earlier version are loaded by later versions.
 
 ## Constraints
 
@@ -40,8 +38,8 @@ capitals.
 - A command handler MUST NOT change the machine state. It only reads it.
 - An event handler MUST NOT emit events or reject. It only produces the next
   machine state.
-- Therefore every change to an aggregate passes through an event, and replay
-  reproduces every change.
+- Therefore every change to an aggregate passes through an event, and what
+  observes its events learns of every change.
 
 ### Determinism
 
@@ -52,7 +50,7 @@ capitals.
 ### Totality of evolving
 
 - Evolving MUST be defined for every event of the aggregate in every state, and
-  MUST NOT fail. Replay of a stream the runtime accepted MUST always succeed.
+  MUST NOT fail.
 - An event for which the current state has no event handler MUST leave the
   machine state unchanged.
 
@@ -100,25 +98,26 @@ capitals.
 - The events of one decision are evolved in the order they were emitted, each
   from the machine state the previous one produced.
 - The machine state after the last event is the aggregate's new state, which the
-  runtime checks against field patterns and invariants before appending (see
+  runtime checks against field patterns and invariants before saving (see
   [handling a command](../aggregates.spec.md#handling-a-command)).
 
 ## Why this design
 
 - **Why deciding cannot change state.** If a command handler changed fields
-  directly, that change would not be in any event, and replay would not
-  reproduce it. Splitting deciding from evolving makes "the state is the replay"
-  hold by construction.
-- **Why evolving cannot fail.** Streams outlive program versions. If evolving
-  could fail, a program change could make an existing stream unreplayable, and
-  its aggregate unreachable forever. So an event the current state does not
-  handle is a no-op, not an error.
+  directly, that change would not be in any event, and nothing observing the
+  aggregate's events would learn of it. Splitting deciding from evolving makes
+  "every change is an event" hold by construction.
+- **Why evolving cannot fail.** Deciding is where a command is accepted or
+  refused, so every refusal is a rejection some handler chose, with its reason.
+  If evolving could fail, a command could be refused by a rule no handler
+  states. So an event the current state does not handle is a no-op, not an
+  error.
 - **Why an unhandled command is rejected rather than ignored.** A command is a
   request that the domain may refuse. Silently accepting a command a state was
   never written to handle would hide a missing rule. Ignoring must be stated.
 - **Why entry and exit actions cannot emit.** They run while evolving, which
-  includes replay. An action that emitted events would emit them again on every
-  replay.
+  applies a decision already made. An action that emitted events would be a
+  second decision, made outside any command handler.
 - **Why there is no `defer`.** P defers events in a machine's queue until a
   later state. An aggregate has no queue: each command is handled at once, as
   one transaction. Waiting for a later state is a manager's concern.
@@ -128,6 +127,3 @@ capitals.
 - **Detecting unhandled events.** Whether the compiler should warn when an event
   a command handler can emit is not handled by the states the machine can be in
   when it is applied.
-- **Evolving events.** How an event's pattern may change once streams contain
-  it, given that old events must still match and replay (see
-  [commands and events](./commands-and-events.spec.md)).

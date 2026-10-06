@@ -58,7 +58,7 @@ patterns as its types and Uffda expressions as its expression language.
 | Manager    | Business operations: bind inputs, load an aggregate, progress it     | Aggregates, projections, services |
 | Reactor    | Reactions to events, as state machines                               | Aggregates, projections, services |
 | Aggregate  | Identity, fields, commands, events, a state machine, invariants      | Patterns and expressions only     |
-| Projection | A read model derived from events                                     | Patterns and expressions only     |
+| Projection | A read model derived from aggregates' stored state                   | Patterns and expressions only     |
 | Service    | A declared capability whose implementation the host program provides | Nothing in the program            |
 
 ## Dependency rules
@@ -135,16 +135,16 @@ of them.
   mode, consumers only in worker mode, and jobs only in job mode.
 - Reactors run in one of two ways, and the config, not the program, MUST decide
   which. The same program MUST run either way without change.
-  - **Distributed.** Processes that append events publish them to an event
-    source, such as a Kafka topic provided by a service, and a separate process
-    in events mode receives them and runs the reactors. This suits production,
+  - **Distributed.** Processes that save events publish them to an event source,
+    such as a Kafka topic provided by a service, and a separate process in
+    events mode receives them and runs the reactors. This suits production,
     where producing and consuming scale as separate services.
-  - **In process.** The process that appended the events runs the reactors
-    itself, with no event source. This suits running locally, with the whole
-    program in one process and its storage in memory.
+  - **In process.** The process that saved the events runs the reactors itself,
+    with no event source. This suits running locally, with the whole program in
+    one process and its storage in memory.
 - Either way, reactions follow the same rules: each runs after the events it
-  reacts to are appended, as its own transaction, and the program cannot tell
-  which way it is running.
+  reacts to are saved, as its own transaction, and the program cannot tell which
+  way it is running.
 - Events are delivered to reactors at least once. The runtime MUST NOT promise
   more, whichever way reactors run and whatever an event source offers, and a
   reactor MUST give the same result when it receives an event it has already
@@ -157,8 +157,8 @@ of them.
   no entry point of the mode reaches MUST NOT be constructed, so a process never
   needs the configuration of, or a connection to, a service it does not use.
 - Every mode runs the same program. Processes running different modes of one
-  program MAY therefore share the program's storage, such as its event streams,
-  directly: they cannot disagree about its shape.
+  program MAY therefore share the program's storage, such as aggregates' stored
+  state, directly: they cannot disagree about its shape.
 
 ## Services from implementors
 
@@ -217,10 +217,11 @@ does not use them, and it may use different technologies.
 
 - Coleslaw programs are interpreted: the runtime, built on the Uffda runtime,
   interprets compiled syntax trees. Coleslaw does not generate code.
-- Aggregates are event-sourced. An aggregate's events are the source of truth
-  for its state: the state is what results from applying each event, in order,
-  to the aggregate's initial state. Projections are derived from events and can
-  always be rebuilt from them.
+- Aggregates are stored as state, not as event histories. An aggregate's stored
+  state, with its version, is the source of truth for it. Every change to that
+  state is described by an event, which is delivered to what observes it and
+  then discarded; nothing is rebuilt by replaying events. Projections are
+  derived from stored states and can always be rebuilt from them.
 
 ## Compilation
 

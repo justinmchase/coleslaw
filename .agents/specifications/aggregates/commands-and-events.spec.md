@@ -28,14 +28,17 @@ capitals.
   language (for example `Submitted`, `Cancelled`).
 - An emitted event's payload MUST match its pattern; otherwise the command that
   emitted it MUST be rejected.
-- An event, once appended, MUST NOT change.
+- An event, once recorded, MUST NOT change.
+- An event is a notice of a change, not a record kept forever: once delivered to
+  everything that observes it, it MAY be discarded (see
+  [events after saving](../aggregates.spec.md#events-after-saving)).
 
 ## Event records
 
-When the runtime appends an event, it records with it:
+When the runtime records an event for delivery, it records with it:
 
 - the aggregate's kind and identity;
-- the event's position in the stream, its version;
+- the event's version: the aggregate's version once the event has been evolved;
 - the time the runtime recorded it.
 
 - The recorded time is when the system noticed the event. When the domain needs
@@ -45,9 +48,8 @@ When the runtime appends an event, it records with it:
 
 ## Open questions
 
-- **Changing an event's pattern.** Streams keep events written under earlier
-  patterns. Whether a changed pattern must still match every earlier event, or
-  whether old events may be upgraded to a new shape as they are read, and how
-  that upgrade is declared.
+- **Changing an event's pattern.** Events recorded but not yet delivered when a
+  new version of the program starts were written under the old pattern. How a
+  reactor or monitor running the new version handles them.
 - **Correlation.** Whether event records carry the command that caused them, and
   the request or job that sent that command, for tracing and auditing.

@@ -21,8 +21,8 @@ statements.
     evolving.
   - [Relationships](./aggregates/relationships.spec.md): references by identity,
     and entities within an aggregate.
-  - [Projections](./aggregates/projections.spec.md): read models built from
-    events.
+  - [Projections](./aggregates/projections.spec.md): read models derived from
+    aggregates' stored state.
   - [Monitors](./aggregates/monitors.spec.md): observers that assert rules about
     events.
 
@@ -45,4 +45,5 @@ shape.
 - `controllers/`: routes, authentication, authorization, and middleware.
 - `consumers`: queues, messages, and binding them to managers.
 - `jobs`: job declarations and their arguments.
-- `runtime`: event storage, ordering across streams, and the retry bound.
+- `runtime`: storing aggregate state, recording and delivering events, and the
+  retry bound.

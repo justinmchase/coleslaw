@@ -52,28 +52,27 @@ capitals.
 - **Command**: a request to change one aggregate, named in the imperative (for
   example `Publish`). It carries a payload, and it may be rejected.
 - **Event**: a fact about a change that happened, named in the past tense (for
-  example `Published`). It carries a payload. Events are immutable and are the
-  source of truth for an aggregate's state.
-- **Stream**: the ordered events of one aggregate.
-- **Version**: the number of events in a stream. Each event's version is its
-  position in the stream.
-- **Event record**: an appended event together with what the runtime records
-  with it: the aggregate's kind and identity, the event's version, and the time
-  it was recorded.
-- **Replay**: evolving an aggregate's initial state by each event in its stream,
-  in order. An aggregate's state is its replay.
+  example `Published`). It carries a payload. Every change to an aggregate is
+  described by an event, which is delivered to what observes it and then
+  discarded. Events are immutable.
+- **Stored state**: an aggregate's machine state and version, as saved by its
+  last accepted command. It is the source of truth for the aggregate.
+- **Version**: the number of events that have changed an aggregate. Each event's
+  version is the aggregate's version once that event has been evolved.
+- **Event record**: an event together with what the runtime records with it: the
+  aggregate's kind and identity, the event's version, and the time it was
+  recorded.
 - **Entity**: a value inside an aggregate with an identity unique only within
   that aggregate, such as a line of an order.
-- **Outcome**: how handling a command ends: accepted, with the events appended;
-  rejected, with a reason; or conflicted, when concurrent changes outlasted the
-  runtime's retries.
+- **Outcome**: how handling a command ends: accepted, with the new state saved
+  and its events recorded; rejected, with a reason; or conflicted, when
+  concurrent changes outlasted the runtime's retries.
 - **Rejection**: a decision to refuse a command, with a reason. A rejection is a
   normal business outcome, not an error.
-- **Conflict**: an append that failed because the stream's version changed after
-  the decision was made.
-- **Projection**: a read model built by applying events, from one or more
-  streams, to an initial value. A projection can always be rebuilt from the
-  events.
+- **Conflict**: a save that failed because the aggregate's stored version
+  changed after the decision was made.
+- **Projection**: a read model derived from the stored states of one or more
+  aggregates. A projection can always be rebuilt from those states.
 
 ## State machines
 
@@ -129,8 +128,8 @@ capitals.
   machines.
 - **Reactor**: a reaction to events, registered for them and expressed as state
   machines, that progresses aggregates with commands. Depending on the config,
-  it runs in the process that appended the events or, in events mode, as an
-  entry point.
+  it runs in the process that saved the events or, in events mode, as an entry
+  point.
 - **Event source**: a service that delivers events to events mode, such as a
   Kafka topic.
 - **Service**: a capability the program declares and the host program

@@ -1,7 +1,7 @@
 # Projections
 
-This chapter defines projections: read models built from events. Terms are
-defined in the [glossary](../glossary.spec.md).
+This chapter defines projections: read models derived from aggregates' stored
+state. Terms are defined in the [glossary](../glossary.spec.md).
 
 ## Conventions
 
@@ -11,32 +11,42 @@ capitals.
 
 ## Declaration
 
-- A projection MUST declare the events it observes, from one or more aggregate
-  kinds, the pattern of its value, and its initial value.
-- A projection MUST declare how each observed event changes its value, with
-  expressions over the event, its record, and the current value.
-- A projection MAY be keyed: one value per key, with each event's key computed
-  from the event. A projection of one aggregate kind keyed by its identity gives
-  one read model per aggregate.
+- A projection MUST declare the aggregate kinds it derives from, the pattern of
+  its value, and how its value is computed, with expressions over the machine
+  states and versions of those aggregates.
+- A projection MAY be keyed: one value per key, with each aggregate's key
+  computed from its state. A projection of one aggregate kind keyed by its
+  identity gives one read model per aggregate.
 
 ## Behavior
 
-- Applying an event to a projection MUST be pure and deterministic, and MUST NOT
-  fail, for the same reasons evolving an aggregate must not (see
-  [state machines](./state-machines.spec.md#why-this-design)).
-- A projection MUST apply the events of each stream in that stream's order.
-- A projection's value MUST be reproducible from the events alone: discarding it
-  and applying every observed event again MUST produce the same value.
-- Projections are eventually consistent: a projection MAY lag behind the streams
-  it observes. A reader MUST be able to learn how far a projection has applied
-  each stream, so a manager can wait for a command's events to appear.
+- A projection's value MUST be a pure, deterministic function of the stored
+  states it derives from. Computing it MUST NOT fail.
+- When an aggregate a projection derives from is saved, the projection MUST be
+  brought up to date with the new state.
+- A projection's value MUST be reproducible from the stored states alone:
+  discarding it and computing it again from the current stored states MUST
+  produce the same value. So a projection can be rebuilt at any time, including
+  when it is new, when its declaration changes, or when its own storage is lost.
+- Projections are eventually consistent: a projection MAY lag behind the states
+  it derives from. A reader MUST be able to learn which version of each
+  aggregate a projection reflects, so a manager can wait for a command's change
+  to appear.
 - Projections MUST NOT emit events, send commands, or call services.
+
+## Why state rather than events
+
+Events are discarded once delivered, so a projection built from events could
+never be rebuilt: a new projection, or a changed one, would have nothing to
+start from. The stored states are kept, so a projection derived from them can
+always be computed again.
 
 ## Open questions
 
-- **Order across streams.** Whether a projection observing several streams sees
-  their events in one global order, or only each stream's own order.
+- **Projections across aggregates.** How a projection that combines many
+  aggregates, such as a count or a total, is computed without reading every
+  aggregate on each save.
 - **Queries.** How managers ask a projection for values: by key only, or by
   patterns over its values, with paging.
-- **Rebuilding.** When the runtime rebuilds a projection, for example after its
-  declaration changes, and what readers see while it does.
+- **Rebuilding.** When the runtime rebuilds a projection, and what readers see
+  while it does.
