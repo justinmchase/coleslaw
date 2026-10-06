@@ -90,5 +90,10 @@ services.
 
 - `extensions`: concerns that run through every program regardless of its code,
   added to the runtime rather than written in the program: correlating each
-  command and event with the request, job, or event that caused it, auditing
-  who did what, and tracing.
+  command and event with the request, job, or event that caused it, auditing who
+  did what, and tracing.
+- `decorators`: attributes on declarations, as Uffda's decorators are, such as
+  `[Auditable]` on an event. A decorator attaches data to a declaration and does
+  no work itself; an extension reads that data and acts on it. So a program
+  chooses which declarations an extension applies to, without the extension's
+  behavior entering the program.
