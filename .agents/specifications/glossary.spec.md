@@ -70,12 +70,12 @@ capitals.
 - **Version**: the number of events that have changed an aggregate. Each event's
   version is the aggregate's version once that event has been evolved.
 - **Event record**: an event together with what the runtime records with it: the
-  aggregate's kind and identity, the event's version, and the time it was
-  recorded.
+  aggregate's kind and identity, the event's name, its shard key, its version,
+  and the time it was recorded.
 - **Shard key**: the key that orders an event's delivery: by default its
-  aggregate's kind and identity, or one its declaration computes. Events of one
-  kind with the same shard key reach each reactor in order; nothing else is
-  ordered.
+  aggregate kind, its name, and its aggregate's identity, or one its aggregate
+  or its declaration computes. Events with the same shard key reach each reactor
+  in order; nothing else is ordered.
 - **Entity**: a value inside an aggregate with an identity unique only within
   that aggregate, such as a line of an order.
 - **Outcome**: how handling a command ends: accepted, with the new state saved

@@ -77,33 +77,35 @@ the same event.
 
 ## Order
 
-Events are ordered the way a partitioned log such as Kafka orders them: by kind,
-and within a kind by a key that shards them.
+Events are ordered the way a partitioned log such as Kafka orders them: by a key
+that shards them.
 
-- Every event MUST have a shard key. By default it is the event's aggregate's
-  kind and identity.
-- An event declaration MAY declare its own shard key instead, computed by an
-  expression from the event's payload and record, such as the customer an order
-  belongs to (see
+- Every event MUST have a shard key. By default it is the event's aggregate
+  kind, the event's name, and the aggregate's identity, so each kind of event
+  from one aggregate is ordered on its own.
+- An aggregate MAY declare a shard key for all of its events, and an event
+  declaration MAY declare its own, which takes precedence. Either is computed by
+  an expression from the event's payload and the rest of its record. A key of
+  the aggregate kind and identity alone orders all of an aggregate's events
+  together; a key naming the customer an order belongs to orders the events of
+  all of that customer's orders (see
   [commands and events](./aggregates/commands-and-events.spec.md#events)).
-- Events of one kind with the same shard key MUST reach each reactor in the
-  order they were recorded. Events of one aggregate are recorded in version
-  order; events of different aggregates that share a shard key are recorded in
-  the order their commands were saved. A reactor MUST complete its reaction to
-  one such event before it receives the next.
-- When a reaction fails, delivery of that kind and shard key to that reactor
-  MUST resume from that event: later events of the same kind and shard key wait
-  until it completes.
-- Nothing else is ordered. Events of different kinds, even from the same
-  aggregate, and events with different shard keys MAY reach a reactor in any
-  order, and MAY be handled at the same time. A reactor that reacts to two kinds
-  of event from one aggregate MUST be written to handle them in either order.
+- Events with the same shard key MUST reach each reactor in the order they were
+  recorded. Events of one aggregate are recorded in version order; events of
+  different aggregates that share a shard key are recorded in the order their
+  commands were saved. A reactor MUST complete its reaction to one such event
+  before it receives the next.
+- When a reaction fails, delivery of that shard key to that reactor MUST resume
+  from that event: later events with the same shard key wait until it completes.
+- Nothing else is ordered. Events with different shard keys MAY reach a reactor
+  in any order, and MAY be handled at the same time. With the default key, a
+  reactor that reacts to two kinds of event from one aggregate MUST be written
+  to handle them in either order.
 - Each reactor's delivery is independent of every other's. Reactors MAY run in
   different processes, and one MAY be ahead of or behind another; each still
   receives its events in this order.
-- An event source used in events mode MUST preserve this order, for example with
-  a topic per event kind, partitioned by shard key, and a consumer group per
-  reactor.
+- An event source used in events mode MUST preserve this order, for example by
+  partitioning by shard key, with a consumer group per reactor.
 
 ## Failure
 
@@ -121,7 +123,7 @@ an expression fails.
 ## Open questions
 
 - **Events that always fail.** A reaction that fails every time holds up every
-  later event of its kind and shard key for that reactor. How the runtime
-  notices it, how long it keeps trying, and where such an event goes.
+  later event with its shard key for that reactor. How the runtime notices it,
+  how long it keeps trying, and where such an event goes.
 - **Bounding a reaction.** A reaction's machine may loop. Whether its steps are
   bounded, and how.

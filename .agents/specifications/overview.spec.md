@@ -147,9 +147,9 @@ of them.
     with no event source. This suits running locally, with the whole program in
     one process and its storage in memory.
 - Either way, reactions follow the same rules: each runs after the event it
-  reacts to is saved, events of one kind reach each reactor in order per shard
-  key (see [reactors](./reactors.spec.md#order)), and the program cannot tell
-  which way it is running.
+  reacts to is saved, events reach each reactor in order per shard key (see
+  [reactors](./reactors.spec.md#order)), and the program cannot tell which way
+  it is running.
 - Events are delivered to reactors at least once. The runtime MUST NOT promise
   more, whichever way reactors run and whatever an event source offers, and a
   reactor MUST give the same result when it receives an event it has already
