@@ -77,15 +77,26 @@ the same event.
 
 ## Order
 
-- The events of one aggregate MUST reach each reactor in version order. A
-  reactor MUST complete its reaction to version `v` before it receives version
-  `v + 1` of the same aggregate.
-- When a reaction fails, delivery to that reactor MUST resume from that event:
-  later events of the same aggregate wait until it completes.
-- Events of different aggregates have no order. A reactor MAY receive them in
-  any order, and MAY handle them at the same time.
-- An event source used in events mode MUST preserve this order, for example by
-  keeping each aggregate's events in one partition.
+Events are ordered the way a partitioned log such as Kafka orders them: by kind,
+and within a kind by a key that shards them.
+
+- Every event MUST have a shard key: its aggregate's kind and identity.
+- Events of one kind with the same shard key MUST reach each reactor in version
+  order. A reactor MUST complete its reaction to one such event before it
+  receives the next.
+- When a reaction fails, delivery of that kind and shard key to that reactor
+  MUST resume from that event: later events of the same kind and shard key wait
+  until it completes.
+- Nothing else is ordered. Events of different kinds, even from the same
+  aggregate, and events with different shard keys MAY reach a reactor in any
+  order, and MAY be handled at the same time. A reactor that reacts to two kinds
+  of event from one aggregate MUST be written to handle them in either order.
+- Each reactor's delivery is independent of every other's. Reactors MAY run in
+  different processes, and one MAY be ahead of or behind another; each still
+  receives its events in this order.
+- An event source used in events mode MUST preserve this order, for example with
+  a topic per event kind, partitioned by shard key, and a consumer group per
+  reactor.
 
 ## Failure
 
@@ -103,7 +114,7 @@ an expression fails.
 ## Open questions
 
 - **Events that always fail.** A reaction that fails every time holds up every
-  later event of its aggregate for that reactor. How the runtime notices it, how
-  long it keeps trying, and where such an event goes.
+  later event of its kind and shard key for that reactor. How the runtime
+  notices it, how long it keeps trying, and where such an event goes.
 - **Bounding a reaction.** A reaction's machine may loop. Whether its steps are
   bounded, and how.
