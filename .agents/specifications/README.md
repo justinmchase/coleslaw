@@ -39,7 +39,9 @@ shape.
 - `startup`: the pipeline from config to an application.
 - `modes`: declaring modes, selecting one, and what each mode constructs and
   runs.
-- `managers` and `services`: composition, and the host-implemented edge.
+- `managers` and `services`: binding inputs to aggregates, and the
+  host-implemented edge.
+- `reactors`: reacting to events, in process and in events mode.
 - `controllers/`: routes, authentication, authorization, and middleware.
 - `consumers`: queues, messages, and binding them to managers.
 - `jobs`: job declarations and their arguments.

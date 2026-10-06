@@ -27,9 +27,13 @@ patterns as its types and Uffda expressions as its expression language.
 - **A constrained universe.** Each layer can express only what belongs to it.
   The language, not convention, keeps business logic out of controllers and
   infrastructure out of aggregates.
-- **State machines are the only logic.** A decision that depends on state or on
-  input MUST be expressed as a transition or handler in a state machine. No
-  other construct branches.
+- **State machines are the only logic.** Choosing what happens (which events are
+  emitted, whether a command is rejected, which state comes next) MUST be done
+  by a handler in a state machine. No other construct chooses what happens.
+- **Patterns may choose values.** A pattern's alternatives MAY choose a value
+  anywhere: a default that depends on another setting, a fallback for a missing
+  value, or which shape an input has. Choosing a value computes it and has no
+  effect, so it is not logic in the sense above.
 - **The ubiquitous language.** Declarations are named in the domain's terms, and
   Coleslaw's own keywords are the vocabulary of domain-driven design, with the
   meanings the glossary gives them.
@@ -38,7 +42,7 @@ patterns as its types and Uffda expressions as its expression language.
   pattern.
 - **Expressions are pure.** Expressions compute values and have no side effects.
   The only side effects in a program are the events aggregates emit and the
-  calls managers make to services.
+  calls managers and reactors make to services.
 - **One source of truth.** A Coleslaw program is the only definition of its
   domain. Compiled forms are build outputs, never edited and never treated as
   sources. Programs are text, so they version and merge like any other code.
@@ -48,22 +52,30 @@ patterns as its types and Uffda expressions as its expression language.
 | Layer      | Holds                                                                | May use                           |
 | ---------- | -------------------------------------------------------------------- | --------------------------------- |
 | Config     | The settings a process runs with, parsed from its input              | Patterns and expressions only     |
-| Controller | Routes, authentication, authorization, middleware                    | Managers                          |
+| Controller | Routes, authentication, authorization, middleware                    | Managers, projections             |
 | Consumer   | The handling of messages from a queue                                | Managers                          |
 | Job        | A named unit of work that runs once                                  | Managers                          |
-| Manager    | Business operations and long-running processes                       | Aggregates, projections, services |
+| Manager    | Business operations: bind inputs, load an aggregate, progress it     | Aggregates, projections, services |
+| Reactor    | Reactions to events, as state machines                               | Aggregates, projections, services |
 | Aggregate  | Identity, fields, commands, events, a state machine, invariants      | Patterns and expressions only     |
 | Projection | A read model derived from events                                     | Patterns and expressions only     |
 | Service    | A declared capability whose implementation the host program provides | Nothing in the program            |
 
 ## Dependency rules
 
-- Controllers, consumers, and jobs MUST reach the domain only through managers.
-  They MUST NOT send commands to aggregates, read projections, or call services
-  directly.
-- A manager MUST be a composition: it sends commands to aggregates, reads
-  projections, and calls services. Any branching in a manager MUST be a state
-  machine, as everywhere else.
+- Controllers, consumers, and jobs MUST change the domain only through managers.
+  They MUST NOT send commands to aggregates or call services directly.
+- Controllers MAY read projections directly. Consumers and jobs read through
+  managers.
+- A manager operation binds its inputs, loads the aggregate it concerns, and
+  progresses it by sending it a command. Any logic a manager needs beyond that
+  MUST be expressed as one or more state machines.
+- A reactor is registered for events, and its logic MUST be expressed as one or
+  more state machines. Like a manager, it progresses aggregates by sending them
+  commands, and it MAY read projections and call services.
+- A reactor MUST NOT run inside the transaction of the command whose event it
+  reacts to. Each reaction is its own transaction, so one command still changes
+  one aggregate.
 - An aggregate MUST NOT call managers, services, or other aggregates. It refers
   to another aggregate only by that aggregate's identity.
 - An aggregate's handling of a command MUST be deterministic: given the same
@@ -71,7 +83,7 @@ patterns as its types and Uffda expressions as its expression language.
   nondeterministic, such as the current time or a new identity, MUST arrive in
   the command.
 - One command changes one aggregate. Consistency across aggregates is eventual:
-  a manager reacts to one aggregate's events by sending commands to others.
+  a reactor reacts to one aggregate's events by sending commands to others.
 - A service MUST NOT call back into the program's layers.
 - Config MUST NOT depend on any other layer. Services, and through them the rest
   of the application, are constructed from config.
@@ -110,16 +122,21 @@ of them.
 
 - A program MUST declare the modes it supports, and its input MUST select
   exactly one.
-- Coleslaw defines three modes. Others MAY be defined later.
+- Coleslaw defines four modes. Others MAY be defined later.
 
   | Mode   | Runs                                                                 | Entry points |
   | ------ | -------------------------------------------------------------------- | ------------ |
   | API    | Serves requests until stopped                                        | Controllers  |
   | Worker | Handles messages from queues until stopped                           | Consumers    |
   | Job    | Runs the one job its input names, then exits with that job's outcome | Jobs         |
+  | Events | Handles events from an event source until stopped                    | Reactors     |
 
 - Each mode's entry points MUST exist only in that mode: controllers only in API
   mode, consumers only in worker mode, and jobs only in job mode.
+- Reactors run in one of two ways. In events mode they are the entry points,
+  receiving events from an event source, such as a Kafka topic provided by a
+  service. In any other mode, a reactor MAY instead run in the same process,
+  after the events it reacts to are appended.
 - A job's schedule is not part of the program. Whatever starts the process, such
   as cron or a deployment's migration step, decides when a job runs.
 - The runtime MUST construct only what the selected mode reaches: its entry
@@ -195,21 +212,12 @@ does not use them, and it may use different technologies.
 
 ## Open questions
 
-- **Choices that are not logic.** Patterns choose between alternatives, and
-  config and shapes need choices such as "port 8000 on localhost, otherwise 443"
-  or "a missing group name defaults to the group's id". Whether such choices are
-  written as pattern alternatives with projections, and how that squares with
-  state machines being the only logic, needs a precise rule: for example, that
-  patterns may classify values but only state machines may decide behavior.
-- **Reacting to events.** Managers that react to one aggregate's events, to keep
-  others eventually consistent, must run somewhere. Worker mode is the natural
-  home, with events delivered to consumers through a queue; whether they may
-  also run in the process that emitted the events is undecided.
-- **Branching in managers.** Whether every manager operation is a state machine,
-  or only those that branch or wait, with straight-line operations written as
-  plain compositions.
-- **Queries.** Whether controllers may read projections directly, as many
-  read-heavy applications want, or must always go through a manager.
+- **Where a reactor runs.** Whether a reactor's declaration says it runs in the
+  same process or in events mode, or the config decides, so one program can be
+  deployed either way.
+- **Delivery.** Event sources such as Kafka usually deliver an event at least
+  once, so a reactor may see the same event twice. Whether the runtime
+  guarantees each reaction happens once, or reactors must tolerate repeats.
 - **Checking programs.** Because all logic lives in state machines, programs
   could be explored systematically the way P checks its machines, including
   monitors that must not remain in a hot state.

@@ -21,8 +21,8 @@ capitals.
   command on one MUST NOT read or change the other.
 - The runtime MUST NOT guarantee that a referenced aggregate exists. Whether a
   reference must resolve is a business rule: a manager checks it, through a
-  projection, before sending the command, and reacts to events when the
-  referenced aggregate changes.
+  projection, before sending the command, and a reactor responds to events when
+  the referenced aggregate changes.
 
 ## Entities within an aggregate
 
