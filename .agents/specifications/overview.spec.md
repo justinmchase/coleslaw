@@ -16,8 +16,8 @@ Coleslaw is a language for writing business applications: the web, CRUD, and
 line-of-business systems whose value lies in their domain rules rather than in
 their infrastructure. A Coleslaw program declares a domain (its aggregates), the
 business operations over it (its managers), the ways the outside world reaches
-it (its controllers and jobs), its configuration, and the modes it can run in.
-The Coleslaw runtime executes that program in one mode per process.
+it (its controllers, consumers, and jobs), its configuration, and the modes it
+can run in. The Coleslaw runtime executes that program in one mode per process.
 
 Coleslaw is built with Uffda: its grammar is a Uffda language, and it uses Uffda
 patterns as its types and Uffda expressions as its expression language.
@@ -49,7 +49,8 @@ patterns as its types and Uffda expressions as its expression language.
 | ---------- | -------------------------------------------------------------------- | --------------------------------- |
 | Config     | The settings a process runs with, parsed from its input              | Patterns and expressions only     |
 | Controller | Routes, authentication, authorization, middleware                    | Managers                          |
-| Job        | A named unit of work run from the command line or a schedule         | Managers                          |
+| Consumer   | The handling of messages from a queue                                | Managers                          |
+| Job        | A named unit of work that runs once                                  | Managers                          |
 | Manager    | Business operations and long-running processes                       | Aggregates, projections, services |
 | Aggregate  | Identity, fields, commands, events, a state machine, invariants      | Patterns and expressions only     |
 | Projection | A read model derived from events                                     | Patterns and expressions only     |
@@ -57,8 +58,9 @@ patterns as its types and Uffda expressions as its expression language.
 
 ## Dependency rules
 
-- Controllers and jobs MUST reach the domain only through managers. They MUST
-  NOT send commands to aggregates, read projections, or call services directly.
+- Controllers, consumers, and jobs MUST reach the domain only through managers.
+  They MUST NOT send commands to aggregates, read projections, or call services
+  directly.
 - A manager MUST be a composition: it sends commands to aggregates, reads
   projections, and calls services. Any branching in a manager MUST be a state
   machine, as everywhere else.
@@ -106,8 +108,18 @@ of them.
 
 - A program MUST declare the modes it supports, and its input MUST select
   exactly one.
-- Each mode determines which entry points exist. Controllers MUST exist only in
-  API mode; jobs MUST exist only in job mode.
+- Coleslaw defines three modes. Others MAY be defined later.
+
+  | Mode   | Runs                                                                 | Entry points |
+  | ------ | -------------------------------------------------------------------- | ------------ |
+  | API    | Serves requests until stopped                                        | Controllers  |
+  | Worker | Handles messages from queues until stopped                           | Consumers    |
+  | Job    | Runs the one job its input names, then exits with that job's outcome | Jobs         |
+
+- Each mode's entry points MUST exist only in that mode: controllers only in API
+  mode, consumers only in worker mode, and jobs only in job mode.
+- A job's schedule is not part of the program. Whatever starts the process, such
+  as cron or a deployment's migration step, decides when a job runs.
 - The runtime MUST construct only what the selected mode reaches: its entry
   points, the managers they use, and the services those managers use. A service
   no entry point of the mode reaches MUST NOT be constructed, so a process never
@@ -128,16 +140,13 @@ of them.
 
 ## Open questions
 
-- **Which modes.** API and job modes are certain. Others the mode pattern names,
-  such as a stream handler or a serverless function, are not yet decided.
 - **Reacting to events.** Managers that react to one aggregate's events, to keep
-  others eventually consistent, must run somewhere: in the process that emitted
-  the events, in a dedicated mode, or both.
+  others eventually consistent, must run somewhere. Worker mode is the natural
+  home, with events delivered to consumers through a queue; whether they may
+  also run in the process that emitted the events is undecided.
 - **Input precedence.** When the command line, the environment, and a config
   file all supply a setting, which wins. The conventional order is command line,
   then environment, then file.
-- **Schedules.** Whether a job's schedule is declared in the program or left to
-  whatever runs the process, such as cron.
 
 - **Branching in managers.** Whether every manager operation is a state machine,
   or only those that branch or wait, with straight-line operations written as

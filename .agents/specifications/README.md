@@ -30,5 +30,6 @@ shape.
   runs.
 - `managers` and `services`: composition, and the host-implemented edge.
 - `controllers/`: routes, authentication, authorization, and middleware.
-- `jobs`: job declarations, their arguments, and schedules.
+- `consumers`: queues, messages, and binding them to managers.
+- `jobs`: job declarations and their arguments.
 - `runtime`: command transactions, event storage, ordering, and determinism.

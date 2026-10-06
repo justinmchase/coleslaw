@@ -83,13 +83,18 @@ capitals.
   environment variables, and, if one is named, a config file.
 - **Config**: the settings a process runs with, parsed from its input by
   matching it against the program's config declaration.
-- **Mode**: one way a program can run, such as serving an API or running jobs. A
-  program declares its modes, and each process runs exactly one.
+- **Mode**: one way a program can run. A program declares its modes, and each
+  process runs exactly one.
+- **API mode**: the mode that serves requests through controllers until stopped.
+- **Worker mode**: the mode that handles messages from queues through consumers
+  until stopped.
+- **Job mode**: the mode that runs the one job its input names, then exits with
+  that job's outcome.
 - **Application**: what startup constructs from the config for one mode: the
   services, managers, and entry points that mode reaches. The program is the
   source; an application is one running instance of it.
 - **Entry point**: how the outside world invokes managers: a controller's routes
-  in API mode, or jobs in job mode.
+  in API mode, consumers in worker mode, or jobs in job mode.
 
 ## Layers
 
@@ -99,9 +104,15 @@ capitals.
   implements, such as sending email or charging a card. Services are the edge of
   the program.
 - **Controller**: a set of routes by which the outside world invokes managers.
-- **Job**: a named unit of work that invokes managers, run in job mode from the
-  command line or on a schedule. Its arguments are matched against a pattern,
-  like any other input.
+- **Queue**: a durable, ordered source of messages, such as a message broker's
+  queue or topic subscription, provided by a service.
+- **Message**: one item taken from a queue. Its body is matched against a
+  pattern, like any other input.
+- **Consumer**: a binding from a queue's messages to a manager, in worker mode.
+- **Job**: a named unit of work that invokes managers and runs once, in job
+  mode. Whatever starts the process, such as cron or a migration step, decides
+  when it runs. Its arguments are matched against a pattern, like any other
+  input.
 - **Route**: a binding from an external request, such as an HTTP method and
   path, to a manager.
 - **Middleware**: a step that runs around a controller's routes, such as logging
