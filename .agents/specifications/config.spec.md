@@ -28,8 +28,8 @@ capitals.
 A process's input comes from two sources built into Coleslaw. When both supply a
 setting, the command line wins over the environment.
 
-- **Command line**: flags, such as `--database-url postgres://...`.
-- **Environment**: variables, such as `DATABASE_URL=postgres://...`.
+- **Command line**: flags, such as `--database.url postgres://...`.
+- **Environment**: variables, such as `DATABASE__URL=postgres://...`.
 
 - Precedence MUST be decided per setting: a setting the command line does not
   supply MAY still come from the environment while another comes from the
@@ -56,17 +56,26 @@ small and each program chooses the sources it wants.
 
 ## Names in each source
 
-Each setting has a path in the config tree, such as `database.url`. Its name in
-each source follows from its path by convention.
+Each setting has a path in the config tree: its segments, each a camel case
+name, such as `database.url` (a `url` setting inside `database`) or
+`databaseUrl` (one setting). Its name in each source follows from its path by
+convention. Each convention separates the words within a segment differently
+from the segments themselves, so that a name maps back to exactly one path.
 
-- A setting's flag MUST be its path in kebab case, with segments joined by `-`
-  (`database.url` is `--database-url`).
-- A setting's environment variable MUST be its path in upper snake case, with
-  segments joined by `_` (`database.url` is `DATABASE_URL`).
+- A setting's segment names MUST be camel case: a lowercase first word, each
+  later word capitalized, with no separators (`databaseUrl`, `apiKey`).
+- A setting's environment variable MUST be its path in upper snake case: words
+  within a segment joined by `_`, and segments joined by `__`. `databaseUrl` is
+  `DATABASE_URL`; `database.url` is `DATABASE__URL`; `payments.apiKey` is
+  `PAYMENTS__API_KEY`.
+- A setting's flag MUST be its path in kebab case: words within a segment joined
+  by `-`, and segments joined by `.`. `databaseUrl` is `--database-url`;
+  `database.url` is `--database.url`; `payments.apiKey` is `--payments.api-key`.
 - A setting MAY declare a different name for any source, which replaces the
   conventional one for that source only.
 - Two settings MUST NOT have the same name in the same source. A program whose
-  conventions or overrides collide MUST be a compile error.
+  overrides collide with each other or with a conventional name MUST be a
+  compile error.
 
 ## Parsing input into config
 
