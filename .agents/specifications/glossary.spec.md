@@ -72,9 +72,10 @@ capitals.
 - **Event record**: an event together with what the runtime records with it: the
   aggregate's kind and identity, the event's version, and the time it was
   recorded.
-- **Shard key**: the key that orders an event's delivery: its aggregate's kind
-  and identity. Events of one kind with the same shard key reach each reactor in
-  order; nothing else is ordered.
+- **Shard key**: the key that orders an event's delivery: by default its
+  aggregate's kind and identity, or one its declaration computes. Events of one
+  kind with the same shard key reach each reactor in order; nothing else is
+  ordered.
 - **Entity**: a value inside an aggregate with an identity unique only within
   that aggregate, such as a line of an order.
 - **Outcome**: how handling a command ends: accepted, with the new state saved

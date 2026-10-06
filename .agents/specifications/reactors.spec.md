@@ -80,10 +80,17 @@ the same event.
 Events are ordered the way a partitioned log such as Kafka orders them: by kind,
 and within a kind by a key that shards them.
 
-- Every event MUST have a shard key: its aggregate's kind and identity.
-- Events of one kind with the same shard key MUST reach each reactor in version
-  order. A reactor MUST complete its reaction to one such event before it
-  receives the next.
+- Every event MUST have a shard key. By default it is the event's aggregate's
+  kind and identity.
+- An event declaration MAY declare its own shard key instead, computed by an
+  expression from the event's payload and record, such as the customer an order
+  belongs to (see
+  [commands and events](./aggregates/commands-and-events.spec.md#events)).
+- Events of one kind with the same shard key MUST reach each reactor in the
+  order they were recorded. Events of one aggregate are recorded in version
+  order; events of different aggregates that share a shard key are recorded in
+  the order their commands were saved. A reactor MUST complete its reaction to
+  one such event before it receives the next.
 - When a reaction fails, delivery of that kind and shard key to that reactor
   MUST resume from that event: later events of the same kind and shard key wait
   until it completes.
