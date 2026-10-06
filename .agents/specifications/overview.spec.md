@@ -98,9 +98,10 @@ Starting a process is itself a pipeline, with the program's declarations as its
 stages:
 
 1. **Input.** The runtime gathers the process's input: its command-line
-   arguments, its environment variables, and, if one is named, a config file.
-   When more than one supplies the same setting, the command line MUST win over
-   the environment, and the environment over the config file.
+   arguments, its environment variables, and, if one is present in its working
+   directory, a `.env` file. When more than one supplies the same setting, the
+   command line MUST win over the environment, and the environment over the
+   `.env` file.
 2. **Config.** The input selects a mode, and is parsed into the program's config
    by matching it against the config declaration, for the settings that mode
    reaches. Input that does not match MUST stop the process before anything else

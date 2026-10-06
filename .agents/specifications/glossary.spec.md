@@ -117,11 +117,12 @@ capitals.
 ## Running
 
 - **Input**: what a process starts with: its command-line arguments, its
-  environment variables, and, if one is named, a config file.
+  environment variables, and, if one is present in its working directory, a
+  `.env` file.
 - **Config**: the settings a process runs with, parsed from its input by
   matching it against the program's config declaration.
 - **Setting**: one named value of the config, with a shape, taken from the
-  command line, the environment, or the config file.
+  command line, the environment, or the `.env` file.
 - **Mode**: one way a program can run: a named declaration of one kind, listing
   the entry points it runs. A program declares one or more modes, one of them
   the default, and each process runs exactly one.
