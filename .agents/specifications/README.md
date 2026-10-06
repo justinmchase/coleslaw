@@ -35,6 +35,12 @@ statements.
   command, and results.
 - [Reactors](./reactors.spec.md): reactions, commands and effects, repeats,
   order, and failure.
+- [Config](./config.spec.md): settings, sources and precedence, naming
+  conventions, and parsing input.
+- [Modes](./modes.spec.md): named modes of four kinds, the default, selecting
+  one, and stopping.
+- [Startup](./startup.spec.md): the pipeline, and how service implementations
+  are imported and chosen.
 
 ## Planned chapters
 
@@ -42,11 +48,6 @@ These are not written yet. They are listed so that new chapters fit the intended
 shape.
 
 - `modules`: files, bounded contexts, and imports.
-- `config`: the config declaration, input sources and their precedence, and
-  parsing input into config.
-- `startup`: the pipeline from config to an application.
-- `modes`: declaring modes, selecting one, and what each mode constructs and
-  runs.
 - `controllers/`: routes, authentication, authorization, and middleware.
 - `consumers`: queues, messages, and binding them to managers.
 - `jobs`: job declarations and their arguments.

@@ -58,7 +58,8 @@ effect again for the same event.
   service, for any technology, configured from the program's config.
 - Which implementation a process uses MUST be chosen by its config, so the same
   program can use, for example, an in-memory implementation locally and a
-  database in production.
+  database in production. Implementations are modules, imported where modes are
+  declared (see [startup](./startup.spec.md#services)).
 - A service MUST be constructed only when the selected mode reaches it (see the
   overview's [modes](./overview.spec.md#modes)).
 - Values crossing a service boundary MUST match the operation's shapes, in both

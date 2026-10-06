@@ -101,10 +101,10 @@ stages:
    arguments, its environment variables, and, if one is named, a config file.
    When more than one supplies the same setting, the command line MUST win over
    the environment, and the environment over the config file.
-2. **Config.** The input is parsed into the program's config, by matching it
-   against the config declaration. Input that does not match MUST stop the
-   process before anything else is constructed, with a diagnostic naming what
-   did not match.
+2. **Config.** The input selects a mode, and is parsed into the program's config
+   by matching it against the config declaration, for the settings that mode
+   reaches. Input that does not match MUST stop the process before anything else
+   is constructed, with a diagnostic naming what did not match.
 3. **Application.** From the config, the pipeline constructs the application:
    the services, then the managers composed of them, then the controllers or
    jobs that reach those managers.
@@ -115,6 +115,8 @@ stages:
 - Startup MUST be free of side effects other than constructing services. In
   particular, no command is handled and no request is served until the run
   stage.
+- The [config](./config.spec.md) and [startup](./startup.spec.md) chapters make
+  this pipeline precise.
 
 ## Modes
 
@@ -124,11 +126,12 @@ This follows the mode pattern of a
 one program declares every mode it can run in, and each process runs exactly one
 of them.
 
-- A program MUST declare the modes it supports, and its input MUST select
-  exactly one.
-- Coleslaw defines four modes. Others MAY be defined later.
+- A program MUST declare the modes it supports, each named and of one kind, with
+  one of them the default. Its input selects one, or gets the default (see
+  [modes](./modes.spec.md)).
+- Coleslaw defines four kinds of mode. Others MAY be defined later.
 
-  | Mode   | Runs                                                                 | Entry points |
+  | Kind   | Runs                                                                 | Entry points |
   | ------ | -------------------------------------------------------------------- | ------------ |
   | API    | Serves requests until stopped                                        | Controllers  |
   | Worker | Handles messages from queues until stopped                           | Consumers    |
@@ -283,7 +286,9 @@ Uffda, specified there, before the Coleslaw chapters that depend on them:
   language with that language's grammar, and write that language's syntax tree.
 - **Resolving other languages.** Uffda's module resolution rejects file
   extensions other than its own today. It MUST be able to resolve an import of a
-  project language's source file to that file's compiled syntax tree.
+  project language's source file to that file's compiled syntax tree, and a
+  TypeScript module whose default export declares that language's declarations,
+  such as a service implementation (see [startup](./startup.spec.md#services)).
 - **Matching undeclared keys.** Uffda's object pattern ignores keys it does not
   declare. It MUST be able to say what those keys must match, including that
   there may be none, so that shapes can be closed (see
