@@ -25,20 +25,34 @@ capitals.
 
 ## Sources
 
-A process's input comes from three sources. When more than one supplies a
-setting, the command line wins over the environment, and the environment over
-the `.env` file.
+A process's input comes from two sources built into Coleslaw. When both supply a
+setting, the command line wins over the environment.
 
 - **Command line**: flags, such as `--database-url postgres://...`.
 - **Environment**: variables, such as `DATABASE_URL=postgres://...`.
-- **`.env` file**: a file in the standard format of one `NAME=value` line per
-  variable, whose names are environment variable names. By default it is the
-  file `.env` in the working directory, read when it is present; without one
-  there is no file. The built-in setting `env-file` MAY name a different file.
 
 - Precedence MUST be decided per setting: a setting the command line does not
   supply MAY still come from the environment while another comes from the
   command line.
+
+## Extending sources
+
+Other sources, such as a `.env` file, are not built in. They are added by
+extensions (see the planned `extensions` chapter), so the config layer stays
+small and each program chooses the sources it wants.
+
+- The config layer MUST allow an extension to add a source.
+- An added source MUST give values by setting, as strings, named as one of the
+  built-in sources names them or by a convention the extension defines.
+- An added source MUST rank below the environment unless the extension declares
+  otherwise, so the command line and the environment always win by default.
+- An added source MUST NOT depend on config the process has not yet parsed,
+  except settings it declares for itself, such as the path of a file it reads,
+  which come from the built-in sources.
+- For example, an extension that reads a `.env` file in the working directory,
+  when one is present, gives environment variables that rank below the real
+  environment, and MAY declare its own setting, such as `--env-file`, to read a
+  different file.
 
 ## Names in each source
 
@@ -49,7 +63,6 @@ each source follows from its path by convention.
   (`database.url` is `--database-url`).
 - A setting's environment variable MUST be its path in upper snake case, with
   segments joined by `_` (`database.url` is `DATABASE_URL`).
-- A setting's name in the `.env` file MUST be its environment variable.
 - A setting MAY declare a different name for any source, which replaces the
   conventional one for that source only.
 - Two settings MUST NOT have the same name in the same source. A program whose
@@ -67,18 +80,13 @@ each source follows from its path by convention.
   its source, and what was expected, but never a secret's value.
 - Input that names no setting, such as an unknown flag, MUST stop the process
   the same way. An environment variable that names no setting is ignored, since
-  the environment holds variables for other programs too, and so is a variable
-  in the `.env` file that names no setting.
+  the environment holds variables for other programs too.
 
 ## Built-in settings
 
 Coleslaw declares some settings itself, in every program:
 
 - `mode`: the mode to run (see [modes](./modes.spec.md#selecting-a-mode)).
-- `env-file`: the path of the `.env` file to read instead of `.env` in the
-  working directory, given by `--env-file` or `ENV_FILE`. It cannot come from a
-  `.env` file. A file it names that does not exist MUST stop the process with a
-  diagnostic, unlike the default file, whose absence is normal.
 - the implementation and settings of each service the selected mode reaches (see
   [startup](./startup.spec.md#services)).
 

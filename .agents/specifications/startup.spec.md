@@ -13,8 +13,8 @@ capitals.
 
 ## The pipeline
 
-1. **Input.** Gather the command line, the environment, and the `.env` file (see
-   [config](./config.spec.md#sources)).
+1. **Input.** Gather the command line, the environment, and any sources
+   extensions add (see [config](./config.spec.md#sources)).
 2. **Mode.** Select the mode from the input (see
    [modes](./modes.spec.md#selecting-a-mode)).
 3. **Reach.** Find what the mode reaches: its entry points, the managers they

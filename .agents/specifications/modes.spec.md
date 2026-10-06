@@ -48,7 +48,7 @@ Coleslaw defines four kinds of mode. Each runs one kind of entry point.
 
 - The built-in setting `mode` MUST select the mode a process runs, by its name
   in kebab case (a mode named `PublicApi` is selected by `--mode public-api`, or
-  `MODE=public-api` in the environment or the `.env` file).
+  `MODE=public-api` in the environment).
 - A process whose input selects no mode MUST run the default mode.
 - Input that names no declared mode MUST stop the process before anything is
   constructed, with a diagnostic listing the declared modes.
