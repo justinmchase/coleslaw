@@ -134,9 +134,10 @@ capitals.
 
 ## Layers
 
-- **Manager**: a business operation: it binds its inputs, loads an aggregate,
-  and progresses it with a command. Any further logic is one or more state
-  machines.
+- **Manager**: a set of business operations that entry points invoke.
+- **Operation**: one business operation of a manager: it binds its input and
+  progresses one aggregate with at most one command. Any further logic is a
+  state machine that lasts for the invocation and is never stored.
 - **Reactor**: a reaction to events, registered for them and expressed as state
   machines, that progresses aggregates with commands. Depending on the config,
   it runs in the process that saved the events or, in events mode, as an entry
@@ -146,6 +147,10 @@ capitals.
 - **Service**: a capability the program declares and the host program
   implements, such as sending email or charging a card. Services are the edge of
   the program.
+- **Query**: a service operation that returns information and changes nothing.
+  Managers and reactors may call queries.
+- **Effect**: a service operation that changes the world outside the program.
+  Only reactors may call effects.
 - **Controller**: a set of routes by which the outside world invokes managers.
 - **Queue**: a durable, ordered source of messages, such as a message broker's
   queue or topic subscription, provided by a service.

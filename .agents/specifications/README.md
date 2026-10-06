@@ -29,6 +29,10 @@ statements.
   values a program may store, equality, and value objects.
 - [Expressions](./expressions.spec.md): purity, scope, core functions, identity
   and deep equality, and failure.
+- [Services](./services.spec.md): declarations, queries and effects, the clock
+  and identity services, and failure.
+- [Managers](./managers.spec.md): operations, their state machines, the one
+  command, and results.
 
 ## Planned chapters
 
@@ -41,8 +45,6 @@ shape.
 - `startup`: the pipeline from config to an application.
 - `modes`: declaring modes, selecting one, and what each mode constructs and
   runs.
-- `managers` and `services`: binding inputs to aggregates, and the
-  host-implemented edge.
 - `reactors`: reacting to events, in process and in events mode.
 - `controllers/`: routes, authentication, authorization, and middleware.
 - `consumers`: queues, messages, and binding them to managers.
