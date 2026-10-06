@@ -28,11 +28,12 @@ capitals.
   in that state.
 - After a decision's events are evolved, every field MUST match its pattern and
   every applicable invariant MUST hold. Otherwise the command MUST be rejected,
-  with a reason naming what failed, and nothing appended.
-- During replay, a field that fails its pattern or an invariant that fails is
-  not a rejection: the stream was accepted, so the failure means the program
-  changed in a way its existing streams do not satisfy. The runtime MUST report
-  it as an error naming the aggregate, the stream version, and what failed.
+  with a reason naming what failed, and nothing saved.
+- When a stored state is loaded, a field that fails its pattern or an invariant
+  that fails is not a rejection: the state was accepted when it was saved, so
+  the failure means the program changed in a way its existing states do not
+  satisfy. The runtime MUST report it as an error naming the aggregate, its
+  version, and what failed, and MUST NOT handle the command.
 
 ## Why invariants are checked after evolving
 

@@ -20,8 +20,8 @@ capitals.
   decides and evolves.
 - [Relationships](./aggregates/relationships.spec.md): references between
   aggregates, and the entities inside one.
-- [Projections](./aggregates/projections.spec.md): read models built from
-  events.
+- [Projections](./aggregates/projections.spec.md): read models derived from
+  aggregates' stored state.
 - [Monitors](./aggregates/monitors.spec.md): observers that assert rules about
   events.
 
@@ -33,30 +33,33 @@ capitals.
   identity MUST NOT change.
 - An aggregate is reached only through its root: the aggregate as a whole.
   Nothing outside an aggregate MAY hold a reference to a part of it.
-- An aggregate's state MUST be exactly the result of evolving its initial state
-  by each event in its stream, in order. No other mechanism changes it.
+- An aggregate's state is stored: its machine state and its version, the number
+  of events that have changed it. The stored state is the source of truth for
+  the aggregate.
+- An aggregate's state MUST change only by evolving it by the events of an
+  accepted command. No other mechanism changes it.
 
 ## Handling a command
 
 Handling a command is one transaction on one aggregate:
 
-1. **Load.** Read the aggregate's stream, and note its version: the number of
-   events in it.
-2. **Rebuild.** Evolve the initial state by each event, in order, to get the
-   current state.
-3. **Decide.** The state machine decides the command against the current state.
+1. **Load.** Read the aggregate's stored state and its version. An aggregate
+   with no stored state has the initial state and version zero.
+2. **Decide.** The state machine decides the command against the current state.
    The decision either rejects the command, with a reason, or emits zero or more
    events.
-4. **Check.** Evolve the current state by the emitted events, and check the
-   result against the aggregate's field patterns and invariants. If the result
-   does not satisfy them, the command MUST be rejected.
-5. **Append.** Append the emitted events to the stream, on the condition that
-   its version is still the one noted at the load step.
+3. **Evolve.** Evolve the current state by the emitted events, in order, to get
+   the new state.
+4. **Check.** Check the new state against the aggregate's field patterns and
+   invariants. If it does not satisfy them, the command MUST be rejected.
+5. **Save.** Store the new state, with its version increased by the number of
+   events, on the condition that the stored version is still the one read at the
+   load step. In the same transaction, record the emitted events for delivery.
 
 - A command MUST change at most one aggregate.
-- If any step fails, no event MUST be appended: a command's events are appended
-  all together or not at all.
-- A command sent to an identity whose stream is empty is handled by the state
+- If any step fails, nothing MUST be saved and no event MUST be recorded: a
+  command's new state and its events are saved together or not at all.
+- A command sent to an identity with no stored state is handled by the state
   machine's start state, with the initial state. This is how aggregates are
   created.
 
@@ -65,30 +68,52 @@ Handling a command is one transaction on one aggregate:
 Handling a command ends in exactly one outcome, reported to the manager that
 sent it:
 
-- **Accepted**, with the events appended. An accepted command MAY have appended
-  no events, when its handler emits none.
-- **Rejected**, with the reason. Nothing was appended. A rejection is a normal
+- **Accepted**, with the new state saved and its events recorded. An accepted
+  command MAY have emitted no events, when its handler emits none; then the
+  state and its version are unchanged.
+- **Rejected**, with the reason. Nothing was saved. A rejection is a normal
   business outcome, not an error.
 - **Conflicted**: concurrent commands kept changing the aggregate, and the
-  runtime gave up retrying (see [concurrency](#concurrency)). Nothing was
-  appended.
+  runtime gave up retrying (see [concurrency](#concurrency)). Nothing was saved.
+
+## Events after saving
+
+An event exists to tell the rest of the program about a change. Once delivered,
+it is not part of the program's working state.
+
+- Every event recorded by a save MUST be delivered, at least once, to every
+  reactor and monitor that observes it (see the overview's
+  [modes](./overview.spec.md#modes)). Recording events in the same transaction
+  as the state, and delivering them from that record afterwards, is what makes
+  this possible: a process that stops between saving and delivering delivers
+  them when it resumes.
+- Once an event has been delivered to everything that observes it, the runtime
+  MAY discard it. Nothing in a program MAY read an event after it has been
+  delivered.
+- Keeping events, for example for auditing or backups, is an ordinary reaction:
+  a reactor the program declares, which passes events to a service the
+  implementor provides. Coleslaw does not specify where or how events are kept,
+  or how they might be used to recover.
+- Aggregates MUST NOT be restored by replaying events: they are loaded from
+  their stored state. To repeat the effect of an event, a manager or reactor
+  sends another command, which emits another event.
 
 ## Concurrency
 
 Concurrency is optimistic: commands on the same aggregate are not locked against
-each other, and conflicts are detected when events are appended.
+each other, and conflicts are detected when the new state is saved.
 
-- An append MUST succeed only if the stream's version is the one the decision
-  was made against. Otherwise it MUST fail without appending anything.
-- When an append fails this way, the runtime MUST handle the command again from
-  the load step, deciding it against the stream as it now is.
+- A save MUST succeed only if the stored version is the one the decision was
+  made against. Otherwise it MUST fail without saving anything.
+- When a save fails this way, the runtime MUST handle the command again from the
+  load step, deciding it against the state as it now is.
 - Handling again MAY end in a different outcome than the first attempt would
   have: the command may now be rejected, or emit different events.
 - The runtime MUST stop after a bounded number of attempts and report the
   command as conflicted.
-- Creating an aggregate is covered by the same rule: the expected version of a
-  new stream is zero, so two commands racing to create one aggregate cannot both
-  succeed.
+- Creating an aggregate is covered by the same rule: the expected version of an
+  aggregate with no stored state is zero, so two commands racing to create one
+  aggregate cannot both succeed.
 
 ## Determinism
 
@@ -97,12 +122,14 @@ each other, and conflicts are detected when events are appended.
 - Anything nondeterministic that a decision needs, such as the current time or a
   new identity, MUST arrive in the command.
 - Because decisions are deterministic, handling a command again after a conflict
-  is always safe: no attempt has any effect except the final append.
+  is always safe: no attempt has any effect except the final save.
 
 ## Open questions
 
 - **The retry bound.** Whether the number of attempts is fixed by the runtime,
   set in config, or declared per aggregate.
-- **Snapshots.** Long streams make rebuilding slow. Whether the runtime may
-  cache a state at a stream version, and how such a cache is invalidated when
-  the program changes.
+- **Changing an aggregate's shape.** Stored states outlive the version of the
+  program that saved them. How a program that changes an aggregate's fields,
+  states, or invariants brings existing stored states along, and what happens to
+  a stored state the new program does not accept (see
+  [fields](./aggregates/fields.spec.md#invariants)).
