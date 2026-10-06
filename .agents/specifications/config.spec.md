@@ -31,10 +31,10 @@ the `.env` file.
 
 - **Command line**: flags, such as `--database-url postgres://...`.
 - **Environment**: variables, such as `DATABASE_URL=postgres://...`.
-- **`.env` file**: a file named `.env` in the working directory, in the standard
-  format of one `NAME=value` line per variable. It is read when it is present;
-  no setting names it, and without one there is no file. Its names are
-  environment variable names.
+- **`.env` file**: a file in the standard format of one `NAME=value` line per
+  variable, whose names are environment variable names. By default it is the
+  file `.env` in the working directory, read when it is present; without one
+  there is no file. The built-in setting `env-file` MAY name a different file.
 
 - Precedence MUST be decided per setting: a setting the command line does not
   supply MAY still come from the environment while another comes from the
@@ -75,6 +75,10 @@ each source follows from its path by convention.
 Coleslaw declares some settings itself, in every program:
 
 - `mode`: the mode to run (see [modes](./modes.spec.md#selecting-a-mode)).
+- `env-file`: the path of the `.env` file to read instead of `.env` in the
+  working directory, given by `--env-file` or `ENV_FILE`. It cannot come from a
+  `.env` file. A file it names that does not exist MUST stop the process with a
+  diagnostic, unlike the default file, whose absence is normal.
 - the implementation and settings of each service the selected mode reaches (see
   [startup](./startup.spec.md#services)).
 
