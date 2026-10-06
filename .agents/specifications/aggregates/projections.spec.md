@@ -36,10 +36,10 @@ capitals.
 
 ## Why state rather than events
 
-Events are discarded once delivered, so a projection built from events could
-never be rebuilt: a new projection, or a changed one, would have nothing to
-start from. The stored states are kept, so a projection derived from them can
-always be computed again.
+Once delivered, events are no longer available to the program, even when they
+are archived, so a projection built from events could never be rebuilt: a new
+projection, or a changed one, would have nothing to start from. The stored
+states are kept, so a projection derived from them can always be computed again.
 
 ## Open questions
 

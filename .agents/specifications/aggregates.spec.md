@@ -78,8 +78,8 @@ sent it:
 
 ## Events after saving
 
-An event exists to tell the rest of the program about a change. It is not kept
-as history.
+An event exists to tell the rest of the program about a change. Once delivered,
+it is not part of the program's working state.
 
 - Every event recorded by a save MUST be delivered, at least once, to every
   reactor and monitor that observes it (see the overview's
@@ -88,10 +88,14 @@ as history.
   this possible: a process that stops between saving and delivering delivers
   them when it resumes.
 - Once an event has been delivered to everything that observes it, the runtime
-  MAY discard it. Nothing in a program MAY read an event after it has been
-  delivered.
-- Aggregates are never rebuilt from events. To repeat the effect of an event, a
+  MAY discard it, or MAY archive it, for example for auditing or backups.
+- Nothing in a program MAY read an event after it has been delivered, whether or
+  not it is archived. An archive is outside the program.
+- In normal operation, aggregates MUST NOT be restored by replaying events: they
+  are loaded from their stored state. To repeat the effect of an event, a
   manager or reactor sends another command, which emits another event.
+- Restoring stored states from archived events is a recovery measure for extreme
+  cases, such as lost storage, and is not part of how a program runs.
 
 ## Concurrency
 
@@ -128,3 +132,7 @@ each other, and conflicts are detected when the new state is saved.
   states, or invariants brings existing stored states along, and what happens to
   a stored state the new program does not accept (see
   [fields](./aggregates/fields.spec.md#invariants)).
+- **Archives and recovery.** Whether Coleslaw specifies archiving events, and
+  tools for auditing an archive or recovering stored states from one, given that
+  evolving an archived event with a later version of the program may not give
+  the state the earlier version saved.

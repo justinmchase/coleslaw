@@ -29,8 +29,9 @@ capitals.
 - An emitted event's payload MUST match its pattern; otherwise the command that
   emitted it MUST be rejected.
 - An event, once recorded, MUST NOT change.
-- An event is a notice of a change, not a record kept forever: once delivered to
-  everything that observes it, it MAY be discarded (see
+- An event is a notice of a change, not the program's record of it: once
+  delivered to everything that observes it, it MAY be discarded or archived, and
+  the program never reads it again (see
   [events after saving](../aggregates.spec.md#events-after-saving)).
 
 ## Event records

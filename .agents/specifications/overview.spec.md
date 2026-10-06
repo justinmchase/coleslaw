@@ -219,9 +219,10 @@ does not use them, and it may use different technologies.
   interprets compiled syntax trees. Coleslaw does not generate code.
 - Aggregates are stored as state, not as event histories. An aggregate's stored
   state, with its version, is the source of truth for it. Every change to that
-  state is described by an event, which is delivered to what observes it and
-  then discarded; nothing is rebuilt by replaying events. Projections are
-  derived from stored states and can always be rebuilt from them.
+  state is described by an event, which is delivered to what observes it. Events
+  MAY be archived for auditing or backups, but in normal operation nothing is
+  restored by replaying them. Projections are derived from stored states and can
+  always be rebuilt from them.
 
 ## Compilation
 
