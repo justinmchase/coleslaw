@@ -37,6 +37,11 @@ Coleslaw defines four kinds of mode. Each runs one kind of entry point.
 | Events | Handles events from an event source until stopped                    | Reactors     |
 
 - A mode MUST list only entry points of its kind.
+- The job kind is named for what it runs, not why it runs. A job may be a
+  migration, a one-time task, or recurring work, but when it runs is decided by
+  whatever starts the process, such as cron or a deployment step. Coleslaw MUST
+  NOT schedule jobs: a job mode has no schedule, and a job's declaration MUST
+  NOT carry one.
 - The kinds are built in. The design of mode kinds MUST allow extensions to add
   kinds later (see the planned `extensions` chapter), so nothing about a kind
   may be special-cased where the runtime selects or runs a mode.
