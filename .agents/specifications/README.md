@@ -27,6 +27,8 @@ statements.
     events.
 - [Patterns as types](./patterns-as-types.spec.md): shapes, closed objects, the
   values a program may store, equality, and value objects.
+- [Expressions](./expressions.spec.md): purity, scope, core functions, identity
+  and deep equality, and failure.
 
 ## Planned chapters
 
@@ -34,7 +36,6 @@ These are not written yet. They are listed so that new chapters fit the intended
 shape.
 
 - `modules`: files, bounded contexts, and imports.
-- `expressions`: the embedded Uffda expression language.
 - `config`: the config declaration, input sources and their precedence, and
   parsing input into config.
 - `startup`: the pipeline from config to an application.

@@ -75,6 +75,11 @@ sent it:
   business outcome, not an error.
 - **Conflicted**: concurrent commands kept changing the aggregate, and the
   runtime gave up retrying (see [concurrency](#concurrency)). Nothing was saved.
+- **Failed**, with an error: handling met a defect in the program, such as a
+  failed expression (see [expressions](./expressions.spec.md#failure)) or a
+  stored state the program no longer accepts (see
+  [fields](./aggregates/fields.spec.md#invariants)). Nothing was saved. Unlike a
+  rejection, a failure is not a business outcome.
 
 ## Events after saving
 
