@@ -290,6 +290,11 @@ Uffda, specified there, before the Coleslaw chapters that depend on them:
   project language's source file to that file's compiled syntax tree, and a
   TypeScript module whose default export declares that language's declarations,
   such as a service implementation (see [startup](./startup.spec.md#services)).
+- **Packages of other languages.** A Uffda package supplies only `.uff` modules
+  today. It MUST be able to supply a project language's compiled modules, so a
+  package can export Coleslaw contexts (see
+  [modules](./modules.spec.md#packages)), while still never loading host code
+  from a package.
 - **Matching undeclared keys.** Uffda's object pattern ignores keys it does not
   declare. It MUST be able to say what those keys must match, including that
   there may be none, so that shapes can be closed (see

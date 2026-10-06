@@ -21,10 +21,16 @@ capitals.
 
 - **Program**: the set of modules that make up one application.
 - **Module**: one Coleslaw source file.
-- **Context**: a bounded context. A named boundary within which every term in
-  the program's domain has a single meaning. The same word MAY mean different
-  things in different contexts, and contexts integrate by translating between
-  their models.
+- **Context**: a bounded context. A declaration naming a part of the program
+  with its own model of the business, in which each term has a single meaning.
+  The same word MAY mean different things in different contexts, and contexts
+  integrate only through what each exports, mainly events.
+- **Member**: an aggregate, projection, manager, reactor, controller, consumer,
+  or job that a context lists, and that belongs to that context alone.
+- **Default context**: the unnamed context of every owned declaration that no
+  context lists. It exports nothing.
+- **Package**: modules published together under one name and version, imported
+  as Uffda's packages are. A package MAY export contexts.
 
 ## Shapes and values
 
