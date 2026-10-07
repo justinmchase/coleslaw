@@ -95,9 +95,15 @@ aggregates.
 - A mode MUST reach the entry points and reactors of a context through that
   context, such as `Catalog.CatalogApi`.
 - Owned declarations that are a member of no context belong to the program's
-  default context, which has no name and exports nothing. A program that
-  declares no contexts is entirely in its default context, so a small program
-  needs no context declarations.
+  default context, which has no name and exports nothing to other contexts. A
+  program that declares no contexts is entirely in its default context, so a
+  small program needs no context declarations.
+- A mode MAY reach the default context's entry points and reactors directly, by
+  importing them from their modules, since the default context has no
+  declaration to reach them through.
+- An owned declaration's name MUST be unique within the default context, as
+  within any context. An aggregate kind in the default context is identified by
+  its name alone.
 
 ## Project file
 

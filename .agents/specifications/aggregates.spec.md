@@ -115,7 +115,7 @@ each other, and conflicts are detected when the new state is saved.
 - Handling again MAY end in a different outcome than the first attempt would
   have: the command may now be rejected, or emit different events.
 - The runtime MUST stop after a bounded number of attempts and report the
-  command as conflicted.
+  command as conflicted (see [runtime](./runtime.spec.md#the-retry-bound)).
 - Creating an aggregate is covered by the same rule: the expected version of an
   aggregate with no stored state is zero, so two commands racing to create one
   aggregate cannot both succeed.
@@ -131,8 +131,6 @@ each other, and conflicts are detected when the new state is saved.
 
 ## Open questions
 
-- **The retry bound.** Whether the number of attempts is fixed by the runtime,
-  set in config, or declared per aggregate.
 - **Changing an aggregate's shape.** Stored states outlive the version of the
   program that saved them. How a program that changes an aggregate's fields,
   states, or invariants brings existing stored states along, and what happens to

@@ -43,17 +43,21 @@ statements.
   are imported and chosen.
 - [Modules](./modules.spec.md): imports and exports, contexts and their
   boundary, and packages.
+- [Controllers](./controllers.spec.md): routes, binding requests, responses,
+  authentication, authorization, middleware, and the server.
+- [Consumers](./consumers.spec.md): queues and their messages, binding messages
+  to managers, dispositions and dead letters, repeats, order, and the redelivery
+  bound.
+- [Jobs](./jobs.spec.md): declarations, arguments and their names, selecting a
+  job, the job's state machine, how a job ends, and running again.
+- [Runtime](./runtime.spec.md): storing aggregate state, handling a command
+  against it, the retry bound, recording and delivering events, and the runtime
+  services.
 
 ## Planned chapters
 
 These are not written yet. They are listed so that new chapters fit the intended
 shape.
-
-- `controllers/`: routes, authentication, authorization, and middleware.
-- `consumers`: queues, messages, and binding them to managers.
-- `jobs`: job declarations and their arguments.
-- `runtime`: storing aggregate state, recording and delivering events, and the
-  retry bound.
 
 ### Fundamental patterns
 

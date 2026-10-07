@@ -58,7 +58,8 @@ Coleslaw defines four kinds of mode. Each runs one kind of entry point.
 - Input that names no declared mode MUST stop the process before anything is
   constructed, with a diagnostic listing the declared modes.
 - A job mode MUST also be given the name of the job to run, by the built-in
-  setting `job`, and that job's arguments (see the planned `jobs` chapter).
+  setting `job`, and that job's arguments (see
+  [jobs](./jobs.spec.md#selecting-a-job)).
 
 ## What a mode constructs
 

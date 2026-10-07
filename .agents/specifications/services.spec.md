@@ -38,6 +38,11 @@ the world only ever follows a change to the program.
 - Nothing else MAY call a service operation: not controllers, consumers, or
   jobs, which go through managers, and not aggregates, projections, monitors,
   expressions, or config.
+- The runtime MAY call a query of a service for a controller's authentication
+  step (see [controllers](./controllers.spec.md#authentication)); the controller
+  itself never calls it.
+- Runtime services, such as the state store, are called only by the runtime and
+  are outside these rules (see [runtime](./runtime.spec.md)).
 - A service MUST NOT call back into the program.
 
 ## Effects and repeats
@@ -96,6 +101,7 @@ match its shape.
   handled the event, which is delivered again.
 - The runtime MUST NOT retry a failed call by itself. Repeats come from
   redelivery to reactors, which the program is already written to tolerate.
+  Redelivering a pending event record is not a retry of a call.
 
 ## Open questions
 

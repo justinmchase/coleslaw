@@ -234,7 +234,8 @@ does not use them, and it may use different technologies.
 ## Execution model
 
 - Coleslaw programs are interpreted: the runtime, built on the Uffda runtime,
-  interprets compiled syntax trees. Coleslaw does not generate code.
+  interprets compiled syntax trees. Coleslaw does not generate code. The
+  [runtime](./runtime.spec.md) chapter makes the rest of this section precise.
 - Aggregates are stored as state, not as event histories. An aggregate's stored
   state, with its version, is the source of truth for it. Every change to that
   state is described by an event, which is delivered to what observes it.
@@ -272,8 +273,9 @@ racing or a repeated event, which neither parsing nor matching can find. The
 checker itself will come later; the language MUST stay checkable now.
 
 - Every source of variation MUST be explicit at the program's edges: the
-  commands that arrive and their order, what services return, and how events are
-  delivered to reactors, including repeats.
+  commands that arrive and their order, the messages queues deliver and their
+  order, what services return, and how events and messages are delivered,
+  including repeats.
 - Everything else MUST be deterministic, so that a run is reproduced exactly by
   replaying the same choices at those edges.
 - A feature that would hide a source of variation inside the program, such as
