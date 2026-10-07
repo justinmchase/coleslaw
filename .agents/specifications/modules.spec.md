@@ -99,10 +99,22 @@ aggregates.
   declares no contexts is entirely in its default context, so a small program
   needs no context declarations.
 
+## Project file
+
+- A Coleslaw project's project file MUST be named `clsw.jsonc`, at the project's
+  root. It MUST have the shape of Uffda's project file (`uffda.jsonc`): its
+  import map, its exports, and its output directory.
+- A project's lockfile MUST be `clsw.lock`, beside its project file, with the
+  shape of Uffda's lockfile.
+- A Coleslaw project MUST NOT need a `uffda.jsonc`. Coleslaw's tools, and
+  Uffda's module resolution when it runs a Coleslaw program, MUST read
+  `clsw.jsonc` instead (see the overview's
+  [Uffda prerequisites](./overview.spec.md#uffda-prerequisites)).
+
 ## Packages
 
 - A package MUST be published, versioned, and imported as Uffda's packages are,
-  with its exports declared in its project file (see the overview's
+  with its exports declared in its `clsw.jsonc` (see the overview's
   [Uffda prerequisites](./overview.spec.md#uffda-prerequisites)).
 - A package MAY export contexts. A program MAY import a context from a package,
   such as `import "@example/product" Catalog;`, and use it as one of its own:

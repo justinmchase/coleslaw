@@ -302,6 +302,10 @@ Uffda, specified there, before the Coleslaw chapters that depend on them:
   package can export Coleslaw contexts (see
   [modules](./modules.spec.md#packages)), while still never loading host code
   from a package.
+- **Project files of other languages.** Uffda reads only `uffda.jsonc` and
+  `uffda.lock` today. A language MUST be able to name its own project file and
+  lockfile, with the same shape, so a Coleslaw project and package use
+  `clsw.jsonc` and `clsw.lock` (see [modules](./modules.spec.md#project-file)).
 - **Matching undeclared keys.** Uffda's object pattern ignores keys it does not
   declare. It MUST be able to say what those keys must match, including that
   there may be none, so that shapes can be closed (see
