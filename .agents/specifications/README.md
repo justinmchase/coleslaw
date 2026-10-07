@@ -41,13 +41,14 @@ statements.
   one, and stopping.
 - [Startup](./startup.spec.md): the pipeline, and how service implementations
   are imported and chosen.
+- [Modules](./modules.spec.md): imports and exports, contexts and their
+  boundary, and packages.
 
 ## Planned chapters
 
 These are not written yet. They are listed so that new chapters fit the intended
 shape.
 
-- `modules`: files, bounded contexts, and imports.
 - `controllers/`: routes, authentication, authorization, and middleware.
 - `consumers`: queues, messages, and binding them to managers.
 - `jobs`: job declarations and their arguments.

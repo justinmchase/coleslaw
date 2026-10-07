@@ -43,6 +43,13 @@ patterns as its types and Uffda expressions as its expression language.
 - **Expressions are pure.** Expressions compute values and have no side effects.
   The only side effects in a program are the events aggregates emit and the
   calls managers and reactors make to services.
+- **Composition, not inheritance.** Reuse and extension MUST be by composition:
+  importing a declaration and using it, wrapping it, or listing it in something
+  larger, such as a context gathering members or a mode gathering entry points.
+  No declaration MAY inherit from, override, or reach into another. Where a
+  component is meant to be extended, it MUST say so with an explicit point of
+  composition, such as a service another module implements or an extension the
+  runtime accepts, rather than leaving its parts open to be replaced.
 - **One source of truth.** A Coleslaw program is the only definition of its
   domain. Compiled forms are build outputs, never edited and never treated as
   sources. Programs are text, so they version and merge like any other code.
@@ -290,6 +297,15 @@ Uffda, specified there, before the Coleslaw chapters that depend on them:
   project language's source file to that file's compiled syntax tree, and a
   TypeScript module whose default export declares that language's declarations,
   such as a service implementation (see [startup](./startup.spec.md#services)).
+- **Packages of other languages.** A Uffda package supplies only `.uff` modules
+  today. It MUST be able to supply a project language's compiled modules, so a
+  package can export Coleslaw contexts (see
+  [modules](./modules.spec.md#packages)), while still never loading host code
+  from a package.
+- **Project files of other languages.** Uffda reads only `uffda.jsonc` and
+  `uffda.lock` today. A language MUST be able to name its own project file and
+  lockfile, with the same shape, so a Coleslaw project and package use
+  `clsw.jsonc` and `clsw.lock` (see [modules](./modules.spec.md#project-file)).
 - **Matching undeclared keys.** Uffda's object pattern ignores keys it does not
   declare. It MUST be able to say what those keys must match, including that
   there may be none, so that shapes can be closed (see
