@@ -113,10 +113,12 @@ capitals.
   aggregates. A projection can always be rebuilt from those states.
 - **Read endpoint**: a named projection read or collection-returning service
   query with shaped inputs, selected results, and declared read limits.
-- **Page**: a bounded ordered list of selected items with a continuation cursor,
-  or no continuation when the read found no more matching items.
+- **Page**: a bounded ordered list of selected items, the total count of
+  authorized matching records, and a continuation cursor, or no continuation
+  when the read found no more matching items.
 - **Cursor**: opaque data identifying an endpoint's saved ordering boundary and
-  selection, not a frozen snapshot or permission to read.
+  selection, not a frozen snapshot or permission to read. It contains no total
+  count.
 - **Nested collection**: a collection selected inside an item or keyed result,
   paged under its own limits and continuation.
 - **Query policy**: numeric defaults and limits inherited from Coleslaw,

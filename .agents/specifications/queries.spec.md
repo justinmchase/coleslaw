@@ -21,8 +21,9 @@ capitals.
   including one inside a returned value. Arrays, sets, and maps used as
   collections follow the same bounds; changing the container does not escape
   them. Fixed-shape tuples are not paged collections.
-- A **page** contains a bounded ordered list of items and a continuation cursor,
-  or no continuation when the read found no further matching items.
+- A **page** contains a bounded ordered list of items, the total count of
+  authorized matching records, and a continuation cursor, or no continuation
+  when the read found no further matching items.
 - A **cursor** is an opaque data value locating the boundary after the last
   returned item for one endpoint and read selection.
 - A **nested collection** is a collection inside a selected item or keyed
@@ -176,8 +177,22 @@ Coleslaw MUST provide these built-in numeric defaults:
 ### Reading a page
 
 - A page result MUST expose `items`, an ordered array matching the endpoint's
-  item shape, and `next`, an opaque cursor or `null`. Projection reads MUST
-  also preserve their ordinary reflected-version information.
+  item shape, `total`, the exact nonnegative integer count of all authorized
+  records matching the selection, and `next`, an opaque cursor or `null`.
+  Projection reads MUST also preserve their ordinary reflected-version
+  information.
+- Every page MUST include `total`, including first pages, cursor continuations,
+  empty pages, and nested pages. It MUST NOT be optional, an estimate, the
+  returned item count, or the number remaining after the cursor boundary.
+  A nested page's total MUST count matches in that parent's selected collection,
+  not across all parents.
+- The count MUST apply the same filters and access scope as the items, before
+  the page size and cursor boundary are applied. Items, total, and continuation
+  MUST describe the same data view for that read. A count failure MUST fail the
+  read, not return a successful page without a total.
+- Each continuation MUST compute its total for that read's current view;
+  totals MAY change between live pages. The cursor token MUST NOT contain the
+  total count, and an earlier total MUST NOT be used to infer completion.
 - The first read MUST select up to its requested or default size in declared
   order. A continuation MUST select matching items strictly after the cursor's
   saved ordering boundary, evaluated against the data visible to that read.
@@ -186,7 +201,7 @@ Coleslaw MUST provide these built-in numeric defaults:
   nonterminal page or a cursor that fails to advance its ordering boundary.
 - With unchanged data and selection, walking the cursor chain MUST return
   every matching item once in order, with a terminal `next` of `null`.
-  Empty collections MUST return empty `items` and `next: null`.
+  Empty collections MUST return empty `items`, `total: 0`, and `next: null`.
 - A cursor MUST remain usable if the item at its boundary is deleted; locating
   that boundary MUST NOT require the item's continued existence.
 - The cursor MUST bind the endpoint and its contract revision, effective
@@ -216,10 +231,16 @@ Coleslaw MUST provide these built-in numeric defaults:
   cursor but MUST validate its binding and result bounds at the service edge.
   Fetching an unlimited provider result and slicing it in a manager MUST NOT
   satisfy a bounded read contract.
+- Computing a matched count through the read implementation MUST NOT itself
+  grant full traversal to program code in API mode. The implementation MAY
+  aggregate matches without returning them; managers and reactors MUST NOT
+  drain pages to construct the count.
 - The runtime MUST validate returned item shapes, page sizes, selected nested
   depth, item-key uniqueness and ordering within each page, and continuation
-  structure before exposing a result. An implementation that violates its
-  declared contract MUST fail the read with a diagnostic naming the endpoint
+  structure before exposing a result. It MUST also validate that every total
+  is a nonnegative integer no smaller than that page's returned item count.
+  An implementation that violates its declared contract MUST fail the read
+  with a diagnostic naming the endpoint
   and failing constraint; it MUST NOT silently slice or repair the result.
 - Invalid external read input MUST be refused. Invalid read arguments computed
   internally, or a failed implementation, MUST fail the invoking operation;
@@ -228,8 +249,9 @@ Coleslaw MUST provide these built-in numeric defaults:
   command and its messages stand. Unknown commit warnings MUST also survive
   read-budget or continuation failures.
 - Controller responses MUST carry the declared page result, including
-  continuation metadata. Authorization and normal response-shape checks still
-  apply; a cursor MUST NOT enable a route to bypass them.
+  total counts and continuation metadata. Authorization and normal
+  response-shape checks still apply; a cursor MUST NOT enable a route to bypass
+  them.
 - Runtime projection rebuilding MAY read every stored state through its own
   storage interface. It is maintenance work, not a program read endpoint, and
   MUST NOT expose an unrestricted storage scan to API code.
@@ -248,6 +270,10 @@ Coleslaw MUST provide these built-in numeric defaults:
 | In-process reactor in API mode attempts a full scan | Forbidden even if invoked asynchronously |
 | Worker manager traverses pages | Permitted; page and nested limits still apply |
 | Later page sees a newly inserted item before its cursor boundary | The item may be omitted; no snapshot guarantee |
+| 25 authorized matches, requested size 10, unchanged data | Pages return 10, 10, and 5 items; each has `total: 25` |
+| Nested collection has 8 matches, default nested size 3 | Return up to 3 items and `total: 8` for that collection |
+| Cursor is beyond all remaining items but 12 matches exist before it | Empty `items`, `total: 12`, and `next: null` |
+| No authorized matches | Empty `items`, `total: 0`, and `next: null` |
 
 ## Why this design
 
@@ -273,7 +299,8 @@ Coleslaw MUST provide these built-in numeric defaults:
   ceiling in this chapter.
 - **Byte and execution budgets.** Scalar sizes, cursor sizes, filter complexity,
   indexes, storage work, and total response bytes need additional bounds.
-  Paging alone does not guarantee bounded database cost or payload bytes.
+  Paging alone does not guarantee bounded database cost or payload bytes;
+  exact matched counts may require substantial storage work even for small pages.
 - **API read-step count.** The built-in numeric default of the shared API
   budget remains undecided. A finite request-level bound is required; neither
   that number nor a deadline is inferred from the page size.
