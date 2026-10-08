@@ -17,6 +17,13 @@ capitals.
 - A projection MAY be keyed: one value per key, with each aggregate's key
   computed from its state. A projection of one aggregate kind keyed by its
   identity gives one read model per aggregate.
+- A projection field declared as an aggregate identity MUST retain that
+  aggregate's nominal identity contract, including after storage and readback.
+  Matching primitive representations MUST NOT erase the declared distinction
+  (see [Types](../types.spec.md#aggregate-identities)).
+- Persisted projection fields MUST resolve to declared Types providing patterns
+  and inspectable storage contracts. Read endpoint and payload shapes MAY
+  continue to use patterns directly.
 - A projection MAY select modeled error occurrences or summaries from its
   aggregates' machine states. Active and resolved occurrences follow the
   ordinary shape, version, and rebuild rules (see

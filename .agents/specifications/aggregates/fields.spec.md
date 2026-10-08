@@ -11,14 +11,21 @@ capitals.
 
 ## Fields
 
-- A field MUST have a name, unique within its aggregate, and a pattern its value
-  must match.
-- A field MUST have an initial value, given in its declaration or implied by its
-  pattern allowing the absence of a value.
-- The identity is a field. Its value MUST be set by the event that creates the
-  aggregate, and MUST NOT change afterwards.
-- Fields MUST be set only by event handlers and by entry and exit actions (see
-  [state machines](./state-machines.spec.md)).
+- A field MUST have a name, unique within its aggregate, and a declared Type
+  providing its value pattern and inspectable storage contract. A bare pattern
+  or named shape alone MUST NOT be used as a persisted field Type.
+- Nullability MUST belong to the field, not the Type's storage descriptor (see
+  [Types](../types.spec.md#fields-and-nullability)).
+- An ordinary field's initial value MUST be explicitly supplied at creation or
+  given by its declared initializer. A field without an initializer MUST receive
+  an explicit creation value; a pattern or nullable field MUST NOT imply a
+  default.
+- The identity is a distinguished field with its aggregate kind's nominal
+  identity contract. It MUST be supplied or explicitly repository-allocated
+  under [Types](../types.spec.md#aggregate-identities), MUST NOT have an
+  ordinary field initializer, and MUST NOT change once assigned.
+- After initialization, ordinary fields MUST be set only by event handlers and
+  by entry and exit actions (see [state machines](./state-machines.spec.md)).
 
 ## Invariants
 
@@ -34,10 +41,10 @@ capitals.
   [errors](../errors.spec.md#deciding-and-evolving)).
 - When a stored state is loaded, a field that fails its pattern, an error
   occurrence that fails its constraints, or an invariant that fails is not a
-  rejection: the state was accepted when it was saved, so the failure means
-  the program changed in a way its existing states do not satisfy. The runtime
-  MUST report it as an error naming the aggregate, its version, and what
-  failed, and MUST NOT handle the command.
+  rejection: the state was accepted when it was saved, so the failure means the
+  program changed in a way its existing states do not satisfy. The runtime MUST
+  report it as an error naming the aggregate, its version, and what failed, and
+  MUST NOT handle the command.
 
 ## Why invariants are checked after evolving
 

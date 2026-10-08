@@ -54,6 +54,14 @@ it demonstrates positional selection of exactly one job, not domain behavior.
 
 ## Settings and explicit composition
 
+The [Types specification](./.agents/specifications/types.spec.md) defines the
+next value/identity model: required Types for persisted fields, storage
+metadata, explicit creation, field nullability, and nominal relationship
+identities. It is a design contract, not implemented syntax yet. The executable
+Counter example still uses the initial pattern-backed field grammar and identity
+initializer; it will be migrated with requirement-citing tests in the
+implementation slice.
+
 ```text
 import "./host.ts" ExampleJob;
 
