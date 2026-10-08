@@ -96,9 +96,9 @@ reaction progresses.
   step results.
 - A reaction's reads MUST follow [queries](./queries.spec.md). Full traversal
   depends on its running mode, not on being a reactor: in-process reactions in
-  API mode MUST NOT traverse fully, while Events mode supports traversal.
-  Synchronous API reactions MUST share the invoking request's read budget;
-  independent API reactions MUST still have a finite invocation read budget.
+  Web mode MUST NOT traverse fully, while Events mode supports traversal.
+  Synchronous Web reactions MUST share the invoking request's read budget;
+  independent Web reactions MUST still have a finite invocation read budget.
 
 ## Commands, messages, and effects
 

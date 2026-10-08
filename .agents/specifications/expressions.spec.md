@@ -21,9 +21,9 @@ capitals.
 
 ## Purity
 
-Expressions compute values. Everything a program does is done by its declarations: aggregates emit events;
-managers and internal-event reactors send commands and enqueue messages; and
-managers and reactors call services.
+Expressions compute values. Everything a program does is done by its
+declarations: aggregates emit events; managers and internal-event reactors send
+commands and enqueue messages; and managers and reactors call services.
 
 - An expression's value MUST depend only on the names in its scope, and
   evaluating it MUST have no effect.
@@ -33,8 +33,9 @@ managers and reactors call services.
   read the environment. A value that varies must arrive from the program's edges
   (see the overview's [checkability](./overview.spec.md#checkability)).
 - Uffda's native expressions, which run host code, MUST NOT be used. A program
-  contains no host code; host code lives only in the implementations of
-  services.
+  contains no host-written domain logic; host code lives in service
+  implementations and explicitly declared runtime/infrastructure adapters (see
+  [application shell](./application-shell.spec.md#host-boundary)).
 
 ## Scope
 
@@ -42,14 +43,18 @@ managers and reactors call services.
   - the names its declaration gives it, which each declaration's chapter defines
     (for example, a command handler gives the command and the machine state);
   - variables captured by the patterns of its declaration;
-  - the funcs and named shapes the module declares or imports;
+  - the funcs and reusable pattern rules the module declares or imports;
   - the core functions.
 - A name that refers to none of these MUST be a compile error. Because every
   scope is known when a program is compiled, an unresolved name never reaches
   the runtime.
 - Uffda's reserved name `_`, the value a pattern matched, MAY be used in a
-  shape's projections. Uffda's reserved name `this`, the parser's match, MUST
-  NOT be used: it describes how a value was parsed, not the domain.
+  shape's projections. Uffda's parser-match `this` MUST NOT be exposed: it
+  describes how a value was parsed, not the domain.
+- In a context-owned mode's composition and entry-point selection, Coleslaw
+  `this` MUST refer to the bound context instance under
+  [modes](./modes.spec.md#declaring-modes). This capability binding MUST NOT
+  expose parser internals or become domain data usable in payload projections.
 
 ## Core functions
 
@@ -93,10 +98,25 @@ it deeply, part by part, and names what failed when it does not match.
   lambda, or an iterator over a collection. Only where a value reaches a shape
   must it be data.
 
+## Member access
+
+- Ordinary member access MUST propagate absence: reading a member of `null` or
+  `undefined`, or a missing member, MUST produce `undefined`. Chained reads MUST
+  follow the same rule without requiring optional-access punctuation.
+- This rule MUST NOT make an unresolved root name valid or suppress other
+  expression failures. Names remain subject to compile-time scope checks.
+- Patterns MUST determine where an absent result is permitted. Passing it to a
+  function or boundary requiring a present value MUST still fail the applicable
+  contract; access MUST NOT invent defaults.
+- Coleslaw MUST use Uffda expression evaluation for this behavior. If a released
+  Uffda runtime does not provide these semantics, that capability MUST be
+  implemented upstream rather than through a private expression interpreter.
+
 ## Failure
 
-An expression can fail: a core function given an argument it does not accept, a
-func whose argument pattern does not match, or a member read from `undefined`.
+An expression can fail: a core function given an argument it does not accept or
+a func whose argument pattern does not match. Missing members themselves
+propagate absence under [member access](#member-access).
 
 - A failed expression is a defect in the program, never a business outcome. It
   MUST NOT be treated as a rejection, or as a failed match of a pattern
@@ -111,6 +131,11 @@ func whose argument pattern does not match, or a member read from `undefined`.
   happen, not that the runtime hides it when it does.
 
 ## Open questions
+
+- **Released-runtime support.** Uffda 0.9.2's member evaluator directly indexes
+  the receiver, so access through `null` or `undefined` does not yet implement
+  the [member access](#member-access) contract. An upstream change and released
+  dependency are required before Coleslaw can claim this behavior is executable.
 
 - **Termination.** Funcs may call themselves, so an expression may never finish.
   Whether evaluation is bounded, and how the bound is chosen and reported.

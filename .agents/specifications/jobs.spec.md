@@ -63,12 +63,13 @@ the rest of the config, and are parsed the same way.
 
 ## Selecting a job
 
-- The built-in setting `job` MUST select the job a job mode runs, by its name in
+- Without an explicit job selection mapping, the built-in setting `job` MUST
+  select the job a job mode runs, by its name in
   kebab case, from the jobs that mode lists. A job named `MigratePrices` is
   selected by `--job migrate-prices`, or `JOB=migrate-prices` in the
   environment.
-- A job mode that lists exactly one job MUST run it when the input selects no
-  job. A job mode that lists more than one MUST stop the process before anything
+- Without an explicit mapping, a job mode that lists exactly one job MUST run
+  it when the input selects no job. A job mode that lists more than one MUST stop the process before anything
   is constructed when the input selects none, with a diagnostic listing the
   mode's jobs.
 - Input that names no job the selected mode lists MUST stop the process before
@@ -80,10 +81,56 @@ the rest of the config, and are parsed the same way.
 - The `job` setting and every job's arguments are settings only of job modes.
   Supplying either on the command line to a mode of another kind MUST stop the
   process as an unknown flag does.
-- A job's name MUST identify one job among all the jobs the program's modes
-  list. Two different jobs with the same name, even in different contexts and
-  listed by different modes, MUST be a compile error naming both, so a job's
-  name and its arguments' names mean one thing wherever they are supplied.
+- In an implicit name-selected job list, a job's name MUST identify one job
+  unambiguously. Name collisions MUST be diagnosed. Explicit mappings MAY
+  distinguish jobs through their owning context's instance bindings instead of declaration
+  names; their argument paths MUST remain unambiguous.
+
+### Explicit job selection mappings
+
+```text
+export context CounterContext {
+    counter: Counter;
+    manager: CounterManager(counter);
+    export increment: IncrementJob(manager);
+    export decrement: DecrementJob(manager);
+
+    export mode JobMode(name: String): Job {
+        jobs(name) {
+            "inc" -> this.increment;
+            "dec" -> this.decrement;
+        }
+    }
+}
+```
+
+- A Job mode MAY declare `jobs(selector) { Pattern -> JobBinding; ... }`.
+  The selector MUST be a pure expression over the mode's validated parameters.
+  A program MAY supply a resolved job-name config setting as a mode argument.
+  An explicit mapping MUST NOT require a second implicit `job` selector.
+- Branch keys MUST accept any Uffda pattern satisfying Coleslaw's data and
+  purity constraints. All branches MUST match against the same selector value;
+  declaration order MUST NOT grant priority.
+- Exactly one branch MUST match. Zero matches MUST fail with a diagnostic
+  identifying the selector and available branches. Multiple matches MUST fail
+  with an ambiguity diagnostic identifying the matching branches, even when
+  they target the same job. Both failures MUST occur before construction.
+- A one-branch mapping MUST still match its pattern; it MUST NOT implicitly
+  select that job on an unmatched or absent selector.
+- Targets MUST be checked against job bindings in the mode's owning context.
+  `this.increment` MUST select the binding on the context instance bound to the
+  running mode, not a static member of a context declaration. Selecting it MUST
+  retain the job's explicitly supplied manager dependencies and their context
+  identity. A job MUST NOT infer its context from its declaration name.
+- Modes MUST NOT select jobs through static context-name member access.
+  Context membership MUST NOT grant the selected job ambient access to other
+  context bindings; its own explicit dependency parameters remain its boundary.
+- Unknown, inaccessible, or non-job targets MUST be compile errors, including
+  in branches not selected for a particular run. A mode MUST NOT combine an
+  explicit mapping with a competing implicit job list.
+- Only the selected job's arguments and dependency graph MUST be reached and
+  constructed. Branch matching MUST NOT instantiate jobs or dependencies.
+  Running and exit outcomes MUST follow the ordinary job lifecycle.
 
 ## Names of arguments
 
@@ -236,8 +283,9 @@ invoked have had their effect, and Coleslaw does not undo or resume them.
 - **Reporting.** Whether a job may report what it did, such as how many items it
   migrated, and where that report goes, given that a job gives no result value
   and calls no services.
-- **Jobs with the same name.** Whether a mode MAY give a job a different name
-  where it lists it, so that two contexts' jobs with the same name can both be
-  run, rather than being a compile error.
+- **Mapped job argument namespaces.** The exact argument-path spelling when
+  qualified jobs have colliding declaration names or multiple patterns select
+  one job. Until a namespace is explicit, ambiguous argument paths MUST be
+  diagnosed rather than guessed.
 - **Arguments from config.** Whether a job's arguments MAY default to a value of
   the program's other settings, or are always independent of them.

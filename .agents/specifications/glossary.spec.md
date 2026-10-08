@@ -163,7 +163,7 @@ capitals.
 - **Mode**: one way a program can run: a named declaration of one kind, listing
   the entry points it runs. A program declares one or more modes, one of them
   the default, and each process runs exactly one.
-- **API mode**: a mode of the kind that serves requests through controllers
+- **Web mode**: a mode of the kind that serves requests through controllers
   until stopped.
 - **Worker mode**: a mode of the kind that handles messages from queues through
   consumers until stopped.
@@ -177,7 +177,7 @@ capitals.
   services, managers, and entry points that mode reaches. The program is the
   source; an application is one running instance of it.
 - **Entry point**: how the outside world invokes managers: a controller's routes
-  in API mode, consumers in worker mode, jobs in job mode, or reactors in events
+  in Web mode, consumers in worker mode, jobs in job mode, or reactors in events
   mode.
 
 ## Layers
@@ -214,7 +214,7 @@ capitals.
 - **Effect**: a service operation that changes the world outside the program.
   Only reactors handling internal events may call effects.
 - **Controller**: a set of routes by which the outside world invokes managers
-  and reads projections, in API mode.
+  and reads projections, in Web mode.
 - **Queue**: a program-owned source of internal work messages, handled by
   exactly one consumer. A queue declares its message shape and names no
   technology; managers and internal reactors of its context may enqueue

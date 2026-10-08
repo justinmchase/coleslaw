@@ -64,6 +64,11 @@ capitals.
 ### States
 
 - A state machine MUST have exactly one start state.
+- An aggregate MUST declare its start state inline as
+  `start state Ready { ... }`, combining the start marker with the state body.
+  Ordinary states use `state Name { ... }`; the start state MAY appear before or
+  after ordinary states. The separate `start Ready;` declaration MUST NOT be
+  accepted. Missing or multiple start state declarations MUST be diagnosed.
 - A state MAY declare an entry action, run when the machine moves into the
   state, and an exit action, run when it moves out of it.
 - Entry and exit actions are part of evolving: they MAY set fields, and MUST NOT
@@ -75,6 +80,10 @@ capitals.
 
 ### Command handlers
 
+- A handler MUST inherit the validated bindings of its
+  [command declaration](./commands-and-events.spec.md#pattern-declarations-and-bindings).
+  It MUST NOT need to repeat the command's input or metadata patterns.
+
 - A command handler names a command, and MAY add a pattern the command's
   payload, the machine state, or both must match.
 - A state MAY have several handlers for one command. They are tried in order,
@@ -83,6 +92,10 @@ capitals.
 - A command handler's body MUST be one of: emitting a sequence of events, each
   with a payload computed by expressions from the command and the machine state;
   or rejecting, with a reason computed the same way.
+- Emission MAY name a
+  [command-derived event projection](./commands-and-events.spec.md#command-derived-event-projections)
+  without an inline payload. All payload projections MUST run against the same
+  decision-time state before any events are evolved.
 - A state MAY ignore a command: the command is accepted and emits no events.
 
 ### Event handlers
@@ -100,8 +113,8 @@ capitals.
 - The events of one decision are evolved in the order they were emitted, each
   from the machine state the previous one produced.
 - The machine state after the last event is the aggregate's new state, which the
-  runtime checks against field patterns, modeled error constraints,
-  and invariants before saving (see
+  runtime checks against field patterns, modeled error constraints, and
+  invariants before saving (see
   [handling a command](../aggregates.spec.md#handling-a-command)).
 
 ## Why this design

@@ -15,7 +15,17 @@ capitals.
 - An aggregate MUST refer to another aggregate only by that aggregate's
   identity, held in a field.
 - A reference field MUST name the kind of aggregate it refers to, so that its
-  pattern is that kind's identity pattern.
+  value contract is that kind's nominal identity contract, including its
+  canonical value pattern and storage representation (see
+  [Types](../types.spec.md#aggregate-identities)). It MUST NOT independently
+  redeclare an unrelated identity field or inherit target identity allocation.
+- Relationship declarations MUST target aggregates directly. A single reference
+  MUST derive its stored identity field contract from the target declaration.
+  For example, `relationship child with Foo foo;` names `Foo` as the target; the
+  relationship role does not by itself define cardinality or ownership.
+- A nullable single reference MUST permit `null`; a required single reference
+  MUST NOT. Nullability MUST derive from the relationship field declaration, not
+  from the target aggregate's identity.
 - A reference MAY be to one aggregate, or to a collection of them.
 - A reference does not make the two aggregates one unit of consistency. A
   command on one MUST NOT read or change the other.
@@ -23,6 +33,8 @@ capitals.
   reference must resolve is a business rule: a manager checks it, through a
   projection, before sending the command, and a reactor responds to events when
   the referenced aggregate changes.
+- Schema metadata MAY describe a potential foreign key, but an adapter MUST NOT
+  impose target-existence enforcement that contradicts this reference contract.
 
 ## Entities within an aggregate
 
@@ -40,3 +52,10 @@ eventual consistency outside the boundary. An object reference across aggregates
 invites changing both in one transaction, which makes the boundary meaningless
 and the aggregates large. An identity can only be used to send a command or to
 look something up, both of which go through a manager.
+
+## Open questions
+
+- **Relationship syntax:** cardinality, ownership roles such as `child`, and
+  nullable-reference spelling.
+- **Physical layout:** inferred column naming, collection-reference storage, and
+  explicit business opt-in to target-existence constraints.

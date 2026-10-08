@@ -1,0 +1,71 @@
+# Runnable legacy syntax; see counter.clsw for the specified design.
+# Counter state is process-local and non-durable; recorded events are not delivered.
+export context CounterContext {
+  counter: Counter;
+  manager: CounterManager(counter);
+  export http: CounterController(manager);
+}
+
+aggregate Counter {
+  identity id: (string) = "";
+  field count: (number) = 0;
+
+  command Increment: ({ id: string, by: number });
+  event Incremented: ({ id: string, by: number, count: number });
+
+  start state Ready {
+    command Increment {
+      emit Incremented: {
+        id: input.id,
+        by: input.by,
+        count: (add state.fields.count input.by)
+      };
+    }
+    event Incremented {
+      set id = input.id;
+      set count = input.count;
+    }
+  }
+}
+
+manager CounterManager(counter: Counter) {
+  operation Increment {
+    input: ({ id: string, by: number });
+    result: (
+      { kind: "accepted", events: any, version: number }
+      | { kind: "rejected", reason: any }
+      | { kind: "conflicted" }
+      | { kind: "failed", error: string, mayHaveCommitted: boolean }
+    );
+    send counter.Increment {
+      identity: input.id;
+      payload: input;
+    }
+  }
+}
+
+controller CounterController(manager: CounterManager) {
+  route POST "/counters/{id}" public {
+    operation manager.Increment;
+    path: ({ id: string });
+    body: ({ by: number });
+    input: { id: request.path.id, by: request.body.by };
+  }
+}
+
+export config CounterSettings {
+  mode: ("api");
+}
+
+export mode CounterApi: Web {
+  controllers {
+    CounterContext.http http;
+  }
+}
+
+export program CounterApplication {
+  config CounterSettings settings;
+  mode settings.mode {
+    "api" => CounterApi;
+  }
+}
