@@ -491,8 +491,7 @@ aggregate OtherCounter {
   field count: (number) = 0;
   command Increment: ({ id: string, by: number });
   event Incremented: ({ id: string, by: number });
-  start Ready;
-  state Ready {
+  start state Ready {
     command Increment {
       emit Incremented: input;
     }

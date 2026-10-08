@@ -20,6 +20,11 @@ Expected behavior:
 - Malformed declarations, trailing junk, and unsupported domain declarations
   MUST be diagnosed; recovered input MUST NOT count as a clean parse.
 - Patterns and expressions MUST be parsed using Uffda grammar components.
+- Aggregate state declarations MUST contain exactly one `start state Name` body,
+  in any position among the states. The AST MUST retain the start name, all
+  state bodies in source order, and source spans covering each declaration.
+  Separate `start Name;`, missing start states, and multiple start states MUST
+  be refused as invalid source.
 
 Postconditions:
 

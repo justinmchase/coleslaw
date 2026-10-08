@@ -64,6 +64,11 @@ capitals.
 ### States
 
 - A state machine MUST have exactly one start state.
+- An aggregate MUST declare its start state inline as
+  `start state Ready { ... }`, combining the start marker with the state body.
+  Ordinary states use `state Name { ... }`; the start state MAY appear before or
+  after ordinary states. The separate `start Ready;` declaration MUST NOT be
+  accepted. Missing or multiple start state declarations MUST be diagnosed.
 - A state MAY declare an entry action, run when the machine moves into the
   state, and an exit action, run when it moves out of it.
 - Entry and exit actions are part of evolving: they MAY set fields, and MUST NOT
@@ -100,8 +105,8 @@ capitals.
 - The events of one decision are evolved in the order they were emitted, each
   from the machine state the previous one produced.
 - The machine state after the last event is the aggregate's new state, which the
-  runtime checks against field patterns, modeled error constraints,
-  and invariants before saving (see
+  runtime checks against field patterns, modeled error constraints, and
+  invariants before saving (see
   [handling a command](../aggregates.spec.md#handling-a-command)).
 
 ## Why this design

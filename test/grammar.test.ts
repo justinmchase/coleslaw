@@ -146,6 +146,50 @@ Deno.test(
 );
 
 Deno.test(
+  "req:application-shell-001 inline start state preserves ordering and refuses separate or ambiguous starts",
+  async () => {
+    const source = `aggregate Counter {
+  identity id: (string) = "";
+  state Before {}
+  start state Ready {}
+  state After {}
+}`;
+    const parsed = await parseApplicationSource(source, "start-state.clsw");
+    assert(parsed.ok, parsed.ok ? "" : parsed.failure.message);
+    const aggregate = parsed.syntax.declarations.find((declaration) =>
+      declaration.kind === "aggregate"
+    );
+    assert(aggregate?.kind === "aggregate");
+    assertEquals(aggregate.start, "Ready");
+    assertEquals(aggregate.states.map((state) => state.name), [
+      "Before",
+      "Ready",
+      "After",
+    ]);
+    for (const state of aggregate.states) {
+      assert(state.span);
+      assertEquals(
+        source.slice(state.span.start.offset, state.span.end.offset),
+        `${state.name === "Ready" ? "start " : ""}state ${state.name} {}`,
+      );
+    }
+    for (
+      const invalid of [
+        source.replace("start state Ready {}", "start Ready; state Ready {}"),
+        source.replace("start state Ready {}", "state Ready {}"),
+        source.replace("state After {}", "start state After {}"),
+      ]
+    ) {
+      const refused = await parseApplicationSource(
+        invalid,
+        "invalid-start.clsw",
+      );
+      assertEquals(refused.ok, false);
+    }
+  },
+);
+
+Deno.test(
   "req:application-shell-009 parses a context-owned event-evolving aggregate",
   async () => {
     const result = await parseApplicationSource(
@@ -160,8 +204,7 @@ aggregate Counter {
   field count: (number) = 0;
   command Increment: ({ id: string, by: number });
   event Incremented: ({ id: string, by: number });
-  start Ready;
-  state Ready {
+  start state Ready {
     command Increment {
       emit Incremented: input;
     }

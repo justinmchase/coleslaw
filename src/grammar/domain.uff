@@ -153,11 +153,10 @@ rule AggregateState =
   }
 ;
 
-rule AggregateStart =
+rule AggregateStartState =
   "start"
-  n:DomainIdentifier
-  ";"
-  -> n
+  s:AggregateState
+  -> s
 ;
 
 rule AggregateInvariant =
@@ -176,8 +175,9 @@ rule AggregateDeclaration =
   c:AggregateCommand*
   e:AggregateEvent*
   v:AggregateInvariant*
-  t:AggregateStart
-  s:AggregateState*
+  a:AggregateState*
+  t:AggregateStartState
+  b:AggregateState*
   "}"
   -> {
     kind: "aggregate",
@@ -187,8 +187,8 @@ rule AggregateDeclaration =
     commands: c,
     events: e,
     invariants: v,
-    start: t,
-    states: s
+    start: t.name,
+    states: (flat [a t b])
   }
 ;
 

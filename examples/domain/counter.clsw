@@ -12,8 +12,7 @@ aggregate Counter {
   command Increment: ({ id: string, by: number });
   event Incremented: ({ id: string, by: number, count: number });
 
-  start Ready;
-  state Ready {
+  start state Ready {
     command Increment {
       emit Incremented: {
         id: input.id,

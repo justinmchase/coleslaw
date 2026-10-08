@@ -257,6 +257,10 @@ function aggregateDeclaration(
     withSpan(event, spans, "AggregateEvent")
   );
   const states = value.states.map((state) => {
+    const locatedState = withSpan(state, spans, "AggregateState");
+    const span = state.name === value.start
+      ? spans.take("AggregateStartState")
+      : locatedState.span;
     const commandHandlers = state.handlers.filter((handler) =>
       "decision" in handler
     );
@@ -264,7 +268,8 @@ function aggregateDeclaration(
       "event" in handler
     );
     return {
-      ...withSpan(state, spans, "AggregateState"),
+      ...locatedState,
+      span,
       commands: commandHandlers.map((handler) => {
         const decisionRule = handler.decision.kind === "emit"
           ? "AggregateCommandEvent"
