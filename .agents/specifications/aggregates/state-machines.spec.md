@@ -13,10 +13,10 @@ capitals.
 
 ## Definitions
 
-- **Machine state**: the pair of the state the machine is in and the values of
-  the aggregate's fields.
+- **Machine state**: the state the machine is in, the values of the aggregate's
+  fields, and its modeled error occurrences (see [errors](../errors.spec.md)).
 - **Initial machine state**: the start state, with every field at its initial
-  value.
+  value and no error occurrences.
 - **Command handler**: a handler in a state for a command. It decides.
 - **Event handler**: a handler in a state for an event. It evolves.
 - **Decision**: the result of a command handler: either a rejection with a
@@ -68,6 +68,8 @@ capitals.
   state, and an exit action, run when it moves out of it.
 - Entry and exit actions are part of evolving: they MAY set fields, and MUST NOT
   emit events or reject.
+- Event handlers and entry and exit actions MAY raise or resolve modeled error
+  occurrences under the [errors](../errors.spec.md#deciding-and-evolving) rules.
 - A state MAY be declared final. A final state has no command handlers, so every
   command to an aggregate in a final state is rejected.
 
@@ -98,7 +100,8 @@ capitals.
 - The events of one decision are evolved in the order they were emitted, each
   from the machine state the previous one produced.
 - The machine state after the last event is the aggregate's new state, which the
-  runtime checks against field patterns and invariants before saving (see
+  runtime checks against field patterns, modeled error constraints,
+  and invariants before saving (see
   [handling a command](../aggregates.spec.md#handling-a-command)).
 
 ## Why this design

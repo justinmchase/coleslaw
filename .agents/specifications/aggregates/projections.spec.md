@@ -17,6 +17,10 @@ capitals.
 - A projection MAY be keyed: one value per key, with each aggregate's key
   computed from its state. A projection of one aggregate kind keyed by its
   identity gives one read model per aggregate.
+- A projection MAY select modeled error occurrences or summaries from its
+  aggregates' machine states. Active and resolved occurrences follow the
+  ordinary shape, version, and rebuild rules (see
+  [errors](../errors.spec.md#reads-and-projections)).
 
 ## Behavior
 

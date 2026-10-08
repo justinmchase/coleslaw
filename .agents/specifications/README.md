@@ -53,6 +53,8 @@ statements.
   job, the job's state machine, how a job ends, and running again.
 - [Runtime](./runtime.spec.md): storing aggregate state, handling commands, the
   retry bound, and recording and delivering events and outbox messages.
+- [Errors](./errors.spec.md): aggregate-owned error kinds and identified
+  occurrences, explicit raising and resolution, retained state, and projections.
 
 ## Planned chapters
 
@@ -65,9 +67,6 @@ Patterns common enough to every application that Coleslaw makes them constructs,
 so the language can constrain them, as it does state machines, managers, and
 services.
 
-- `errors`: errors as modeled data, not exceptions or logs. An error is bound to
-  an aggregate, stored with it, and can be queried and projected out to users. A
-  candidate home for reactions that fail every time.
 - `workflows`: long-running entities that are state machines the runtime
   advances, not user code, until they reach a final state. Each has a progress:
   a tree of branches and leaves as work fans out and back in, rolled up into

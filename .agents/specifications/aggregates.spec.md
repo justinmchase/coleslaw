@@ -24,11 +24,16 @@ capitals.
   aggregates' stored state.
 - [Monitors](./aggregates/monitors.spec.md): observers that assert rules about
   events.
+- [Errors](./errors.spec.md): error kinds and occurrences retained as part of an
+  aggregate's machine state.
 
 ## The aggregate
 
 - An aggregate declaration MUST name the aggregate's kind and declare its
   identity, its fields, its commands, its events, and its state machine.
+- An aggregate MAY declare modeled error kinds. Their occurrences MUST be
+  stored as part of its machine state and changed only through evolving its
+  events (see [errors](./errors.spec.md)).
 - Every aggregate of a kind MUST have a distinct identity, and an aggregate's
   identity MUST NOT change.
 - An aggregate is reached only through its root: the aggregate as a whole.
@@ -50,8 +55,9 @@ Handling a command is one transaction on one aggregate:
    events.
 3. **Evolve.** Evolve the current state by the emitted events, in order, to get
    the new state.
-4. **Check.** Check the new state against the aggregate's field patterns and
-   invariants. If it does not satisfy them, the command MUST be rejected.
+4. **Check.** Check the new state against the aggregate's field patterns,
+   modeled error constraints, and invariants. If it does not satisfy them, the
+   command MUST be rejected.
 5. **Save.** Store the new state, with its version increased by the number of
    events, on the condition that the stored version is still the one read at the
    load step. In the same transaction, record the emitted events and any

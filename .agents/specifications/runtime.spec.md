@@ -19,6 +19,9 @@ capitals.
 - The runtime MUST store each aggregate as its stored state: its machine state
   and its version. The stored state is the source of truth for the aggregate
   (see the overview's [execution model](./overview.spec.md#execution-model)).
+- Machine state MUST include any modeled error occurrences, active or resolved.
+  They are saved with that state, not in a separate error store (see
+  [errors](./errors.spec.md)).
 - The runtime MUST NOT restore, rebuild, or check an aggregate by replaying
   events. Loading an aggregate reads its stored state and nothing else.
 - An aggregate kind is identified by its context's name and its own name (see
@@ -38,7 +41,8 @@ section says what each step reads and writes.
 1. **Load.** Read the aggregate's stored state and version from the state store
    (see [runtime services](#runtime-services)). An aggregate with no stored
    state has the initial machine state and version zero. A loaded state that
-   fails a field pattern or an invariant ends the command as failed (see
+   fails a field pattern, modeled error constraint, or invariant ends the
+   command as failed (see
    [fields](./aggregates/fields.spec.md#invariants)).
 2. **Decide.** Match the command's payload against its pattern, then run the
    state machine's command handler against the loaded state. A payload that does
@@ -46,8 +50,9 @@ section says what each step reads and writes.
 3. **Evolve.** Evolve the loaded state by the decided events, in the order they
    were emitted, to get the new state.
 4. **Check.** Check each emitted event's payload against its pattern, and the
-   new state against the field patterns and invariants. A failure ends the
-   command as rejected, with a reason naming what failed.
+   new state against the field patterns, modeled error constraints, and
+   invariants. A failure ends the command as rejected, with a reason naming
+   what failed.
 5. **Save.** Ask the state store to store the new state with its version
    increased by the number of events, on the condition that the stored version
    is still the one loaded, and in the same transaction to record an event

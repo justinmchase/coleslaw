@@ -29,11 +29,15 @@ capitals.
 - After a decision's events are evolved, every field MUST match its pattern and
   every applicable invariant MUST hold. Otherwise the command MUST be rejected,
   with a reason naming what failed, and nothing saved.
-- When a stored state is loaded, a field that fails its pattern or an invariant
-  that fails is not a rejection: the state was accepted when it was saved, so
-  the failure means the program changed in a way its existing states do not
-  satisfy. The runtime MUST report it as an error naming the aggregate, its
-  version, and what failed, and MUST NOT handle the command.
+- Invariants MAY inspect modeled error occurrences as part of machine state.
+  Occurrences MUST also satisfy their declared identity and details shapes (see
+  [errors](../errors.spec.md#deciding-and-evolving)).
+- When a stored state is loaded, a field that fails its pattern, an error
+  occurrence that fails its constraints, or an invariant that fails is not a
+  rejection: the state was accepted when it was saved, so the failure means
+  the program changed in a way its existing states do not satisfy. The runtime
+  MUST report it as an error naming the aggregate, its version, and what
+  failed, and MUST NOT handle the command.
 
 ## Why invariants are checked after evolving
 
