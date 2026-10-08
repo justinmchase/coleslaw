@@ -68,6 +68,10 @@ capitals.
 - Job mode MUST select exactly one named job per run. A single listed job MAY
   be selected implicitly; multiple listed jobs require an explicit job name.
   Unknown jobs MUST fail before construction, listing the available jobs.
+- Job modes MAY instead use `jobs(selector)` with pattern-to-job binding
+  branches under [jobs](./jobs.spec.md#explicit-job-selection-mappings).
+  Exactly one branch MUST match; no match or ambiguity MUST fail before
+  construction. Only the selected job's graph MUST be reached.
 
 ## Explicit composition
 

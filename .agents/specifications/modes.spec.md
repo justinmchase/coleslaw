@@ -79,16 +79,21 @@ Coleslaw defines four kinds of mode. Each runs one kind of entry point.
   [application shell](./application-shell.spec.md#settings-and-selection)).
 - Input that names no declared mode MUST stop the process before anything is
   constructed, with a diagnostic listing the declared modes.
-- A job mode MUST also be given the name of the job to run, by the built-in
-  setting `job`, and that job's arguments (see
+- A job mode MUST also select exactly one job, either by the built-in setting
+  `job` or an explicit `jobs(selector)` mapping, and resolve that job's arguments
+  (see
   [jobs](./jobs.spec.md#selecting-a-job)).
 
 ## What a mode constructs
 
-- A mode MUST construct only what its entry points reach: the managers they use,
+- A mode MUST construct only what its selected entry points reach: the managers
+  they use,
   the reactors that run in process, the queues they send to or consume, the
   external event sources they handle, and the services those use (see
   [startup](./startup.spec.md)).
+- A Job mode's explicit mapping MUST select exactly one matching branch before
+  reachability and construction. Unselected jobs MUST NOT cause dependencies
+  to be constructed or their settings to be required.
 - The config MUST be checked only for the settings the selected mode reaches. A
   process MUST NOT need settings, such as a connection string, for a service its
   mode never uses.

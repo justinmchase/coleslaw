@@ -121,7 +121,23 @@ export mode Batch(jobName: (JobName)): Job {
 }
 ```
 
-Selection arguments match the ordered parameter shapes before construction.
+Selection arguments match the ordered parameter shapes before construction. The
+[Job specification](./.agents/specifications/jobs.spec.md#explicit-job-selection-mappings)
+also defines explicit dispatch (not yet implemented):
+
+```text
+export mode JobMode(name: String): Job {
+  jobs(name) {
+    "inc" -> CounterContext.increment;
+    "dec" -> CounterContext.decrement;
+  }
+}
+```
+
+Targets are exported job bindings. Exactly one pattern must match; no match or
+overlapping matches fail before construction. Only the selected job's graph is
+reached. Qualified names preserve context visibility without ambient access.
+
 Parameters can also be explicitly injected into component factories. Shapes use
 ordinary named imports/exports, with unknown names and cycles rejected. Config
 patterns stay self-contained, as required by the config contract; config cannot
