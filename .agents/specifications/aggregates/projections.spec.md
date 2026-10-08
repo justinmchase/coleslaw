@@ -21,6 +21,10 @@ capitals.
   aggregates' machine states. Active and resolved occurrences follow the
   ordinary shape, version, and rebuild rules (see
   [errors](../errors.spec.md#reads-and-projections)).
+- A projection MUST declare its read endpoints, including selected result
+  shapes. Collection selection, filtering, ordering, and paging follow
+  [queries](../queries.spec.md#declared-access); a stored projection value is
+  not automatically an unbounded public read result.
 
 ## Behavior
 
@@ -50,7 +54,5 @@ states are kept, so a projection derived from them can always be computed again.
 - **Projections across aggregates.** How a projection that combines many
   aggregates, such as a count or a total, is computed without reading every
   aggregate on each save.
-- **Queries.** How managers ask a projection for values: by key only, or by
-  patterns over its values, with paging.
 - **Rebuilding.** When the runtime rebuilds a projection, and what readers see
   while it does.

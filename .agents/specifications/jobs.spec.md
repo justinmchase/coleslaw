@@ -32,6 +32,9 @@ orders. Like every entry point, it reaches the domain only through managers.
   services. A job that does any of these MUST be a compile error. What it needs
   to read, and the current time or a new identity, it gets from a manager
   operation.
+- Job mode permits full collection traversal through those manager operations,
+  with every page still bounded by [queries](./queries.spec.md#mode-capability).
+  The permission belongs to the mode, not to a job declaration.
 - A job declaration MUST NOT carry a schedule. When a job runs is decided by
   whatever starts the process, such as cron or a deployment's migration step
   (see [kinds](./modes.spec.md#kinds)).

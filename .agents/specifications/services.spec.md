@@ -21,6 +21,11 @@ capitals.
 - An outcome the domain cares about, such as a declined payment or a missing
   record, MUST be part of the operation's output shape, usually as one of its
   alternatives. It is a result, not a failure.
+- A query returning collections MUST declare a bounded read endpoint with
+  declared offset pages or cursor batches, selected nested collections, and
+  opt-in filters and sorting under [queries](./queries.spec.md). The service
+  edge MUST validate those
+  bounds; a manager MUST NOT fetch an unlimited result and slice it afterwards.
 
 ## Queries and effects
 

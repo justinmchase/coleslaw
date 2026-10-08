@@ -50,6 +50,17 @@ Coleslaw defines four kinds of mode. Each runs one kind of entry point.
   internal-event reactors run in process (see the overview's
   [modes](./overview.spec.md#modes)).
 
+## Collection traversal
+
+- API mode MUST NOT support full collection traversal. Worker, Job, and Events
+  modes MUST support it under the per-read limits of
+  [queries](./queries.spec.md#mode-capability).
+- This capability MUST be part of the mode kind's design, not config or an
+  endpoint setting. An extension-defined kind MUST declare its capability.
+- Managers and in-process reactors MUST inherit the running mode's capability.
+  A reactor that needs full traversal MUST NOT run in process in API mode; it
+  must run in a supporting mode such as Events.
+
 ## Selecting a mode
 
 - The built-in setting `mode` MUST select the mode a process runs, by its name

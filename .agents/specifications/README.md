@@ -55,6 +55,9 @@ statements.
   retry bound, and recording and delivering events and outbox messages.
 - [Errors](./errors.spec.md): aggregate-owned error kinds and identified
   occurrences, explicit raising and resolution, retained state, and projections.
+- [Queries](./queries.spec.md): bounded reads, global and endpoint limits,
+  offset pages, nested results, declared filtering and sorting, cursor
+  iteration, and traversal capabilities of modes.
 
 ## Planned chapters
 
@@ -72,12 +75,6 @@ services.
   a tree of branches and leaves as work fans out and back in, rolled up into
   completed and total counts, plus progress content the program reports. Any
   caller can learn a workflow's state.
-- `queries`: every operation that returns a set is paged, and every query is
-  limited. Nested sets are limited further, and how deep set queries nest is
-  limited explicitly, so payload sizes and query times stay bounded. Sorting and
-  filtering are declared, opt-in per operation, never available everywhere.
-  Iterating a whole collection is allowed only in modes suited to it, such as a
-  job, never while serving a request.
 - `timers`: deadlines and commands scheduled for later, such as escalating an
   approval not decided within three days. Time comes from the clock service, so
   a checker controls it.

@@ -100,6 +100,10 @@ Coleslaw declares some settings itself, in every program:
   named for it (see [jobs](./jobs.spec.md#selecting-a-job)).
 - `commandAttempts`: the retry bound for conflicted commands (see
   [runtime](./runtime.spec.md#the-retry-bound)).
+- query policy overrides: optional per-setting overrides of Coleslaw and
+  program defaults, before endpoint read-limit overrides (see
+  [queries](./queries.spec.md#defaults-and-overrides)). These MUST NOT change a
+  mode's traversal capability.
 - the implementation and settings of each service, queue, and external event
   source the selected mode reaches (see [startup](./startup.spec.md#services),
   [queues](./queues.spec.md#implementations), and
