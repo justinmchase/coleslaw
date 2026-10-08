@@ -14,10 +14,11 @@ capitals.
 
 Coleslaw is a language for writing business applications: the web, CRUD, and
 line-of-business systems whose value lies in their domain rules rather than in
-their infrastructure. A Coleslaw program declares a domain (its aggregates), the
-business operations over it (its managers), the ways the outside world reaches
-it (its controllers, consumers, and jobs), its configuration, and the modes it
-can run in. The Coleslaw runtime executes that program in one mode per process.
+their infrastructure. A Coleslaw program declares a domain (its aggregates),
+the business operations over it (its managers), the ways the outside world
+reaches it (its controllers, consumers, and jobs), its internal queues and
+reactions to events, its configuration, and the modes it can run in. The
+Coleslaw runtime executes that program in one mode per process.
 
 Coleslaw is built with Uffda: its grammar is a Uffda language, and it uses Uffda
 patterns as its types and Uffda expressions as its expression language.
@@ -41,8 +42,9 @@ patterns as its types and Uffda expressions as its expression language.
   Uffda pattern, and checking a value against a shape means matching the
   pattern.
 - **Expressions are pure.** Expressions compute values and have no side effects.
-  The only side effects in a program are the events aggregates emit and the
-  calls managers and reactors make to services.
+  Program effects are explicit: aggregates emit events; managers and internal
+  reactors send commands or enqueue messages; and managers and reactors call
+  services.
 - **Composition, not inheritance.** Reuse and extension MUST be by composition:
   importing a declaration and using it, wrapping it, or listing it in something
   larger, such as a context gathering members or a mode gathering entry points.
@@ -60,10 +62,10 @@ patterns as its types and Uffda expressions as its expression language.
 | ---------- | -------------------------------------------------------------------- | ---------------------------------------------------- |
 | Config     | The settings a process runs with, parsed from its input              | Patterns and expressions only                        |
 | Controller | Routes, authentication, authorization, middleware                    | Managers, projections                                |
-| Consumer   | The handling of messages from a queue                                | Managers                                             |
+| Consumer   | The handling of messages from the program's own queues                | Managers                                             |
 | Job        | A named unit of work that runs once                                  | Managers                                             |
-| Manager    | Business operations: bind inputs, send one aggregate a command       | One aggregate, projections, service queries          |
-| Reactor    | Reactions to events, as state machines                               | Aggregates, projections, service queries and effects |
+| Manager    | Business operations: bind inputs, send one aggregate a command       | One aggregate, projections, service queries, and queues |
+| Reactor    | Reactions to internal or external events, as state machines          | Internal: managers, aggregates, projections, queries, effects and queues; external: managers only |
 | Aggregate  | Identity, fields, commands, events, a state machine, invariants      | Patterns and expressions only                        |
 | Projection | A read model derived from aggregates' stored state                   | Patterns and expressions only                        |
 | Service    | A declared capability whose implementation the host program provides | Nothing in the program                               |
@@ -75,15 +77,20 @@ patterns as its types and Uffda expressions as its expression language.
 - Controllers MAY read projections directly. Consumers and jobs read through
   managers.
 - A manager operation binds its input, chooses the aggregate it concerns, and
-  progresses it by sending it at most one command. Any logic it needs beyond
-  that MUST be expressed as a state machine that lasts for the invocation (see
+  progresses it by sending it at most one command. It MAY enqueue messages
+  atomically with that command. Any logic it needs beyond that MUST be expressed
+  as a state machine that lasts for the invocation (see
   [managers](./managers.spec.md)).
-- A reactor is registered for events, and its logic MUST be expressed as one or
-  more state machines. Like a manager, it progresses aggregates by sending them
-  commands, and it MAY read projections and call services.
+- A reactor is registered for internal or external events, and its logic MUST
+  be expressed as one or more state machines. An internal-event reactor may
+  progress aggregates by sending commands, read projections, call services,
+  invoke managers, and send queue messages. An external-event reactor MUST
+  invoke managers only, so it translates a foreign vocabulary at the program's
+  boundary (see [reactors](./reactors.spec.md#external-events)).
 - Service operations are queries or effects. Managers and reactors MAY call
-  queries; only reactors MAY call effects, so the world changes only after the
-  program has (see [services](./services.spec.md)).
+  queries; only reactors handling internal events MAY call effects, so the
+  world changes only after the program has (see
+  [services](./services.spec.md)).
 - A reactor MUST NOT run inside the transaction of the command whose event it
   reacts to. Each command a reaction sends is its own transaction, so one
   command still changes one aggregate (see [reactors](./reactors.spec.md)).
@@ -94,7 +101,8 @@ patterns as its types and Uffda expressions as its expression language.
   nondeterministic, such as the current time or a new identity, MUST arrive in
   the command.
 - One command changes one aggregate. Consistency across aggregates is eventual:
-  a reactor reacts to one aggregate's events by sending commands to others.
+  a reactor reacts to one aggregate's events by sending commands to others, or
+  a consumer handles a queued message through a manager.
 - A service MUST NOT call back into the program's layers.
 - Config MUST NOT depend on any other layer. Services, and through them the rest
   of the application, are constructed from config.
@@ -114,8 +122,9 @@ stages:
    reaches. Input that does not match MUST stop the process before anything else
    is constructed, with a diagnostic naming what did not match.
 3. **Application.** From the config, the pipeline constructs the application:
-   the services, then the managers composed of them, then the controllers or
-   jobs that reach those managers.
+   the services and reached queue and event-source implementations, then the
+   managers and reactors composed of them, then the entry points that reach
+   those declarations.
 4. **Run.** The application is handed to the runtime, which runs it as the
    selected mode.
 
@@ -234,7 +243,8 @@ does not use them, and it may use different technologies.
 ## Execution model
 
 - Coleslaw programs are interpreted: the runtime, built on the Uffda runtime,
-  interprets compiled syntax trees. Coleslaw does not generate code.
+  interprets compiled syntax trees. Coleslaw does not generate code. The
+  [runtime](./runtime.spec.md) chapter makes the rest of this section precise.
 - Aggregates are stored as state, not as event histories. An aggregate's stored
   state, with its version, is the source of truth for it. Every change to that
   state is described by an event, which is delivered to what observes it.
@@ -272,8 +282,9 @@ racing or a repeated event, which neither parsing nor matching can find. The
 checker itself will come later; the language MUST stay checkable now.
 
 - Every source of variation MUST be explicit at the program's edges: the
-  commands that arrive and their order, what services return, and how events are
-  delivered to reactors, including repeats.
+  commands that arrive and their order, the messages queues deliver and their
+  order, what services return, and how events and messages are delivered,
+  including repeats.
 - Everything else MUST be deterministic, so that a run is reproduced exactly by
   replaying the same choices at those edges.
 - A feature that would hide a source of variation inside the program, such as

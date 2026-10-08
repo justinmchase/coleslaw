@@ -24,11 +24,15 @@ capitals.
 ## What an operation does
 
 The common operation binds its input, chooses the aggregate it concerns, and
-sends that aggregate a command. It needs no machine:
+sends that aggregate a command. It MAY also enqueue messages with that command
+(see [queues](./queues.spec.md#sending)). It needs no machine:
 
 - An operation MAY be declared as the identity of an aggregate and a command,
   each computed by expressions from the input, and a result computed from the
   command's outcome.
+- An operation MAY declare messages to enqueue with its command, computed by
+  expressions from its input and variables. The runtime MUST enqueue them only
+  if the command is accepted, atomically with the command's state and events.
 
 An operation that needs more, such as reading a projection, calling a query, or
 choosing between commands, runs a state machine.
@@ -64,9 +68,15 @@ never stored.
 ## The command
 
 One operation changes at most one aggregate. Work across aggregates happens
-through reactors reacting to the events the operation's command produces.
+through reactors reacting to the events the operation's command produces, or
+through messages the operation enqueues with that command.
 
 - An operation MUST send at most one command.
+- An operation MUST NOT enqueue a message unless it sends a command. Its
+  messages MUST be written atomically with that command's accepted change and
+  MUST NOT be enqueued when the command is rejected, conflicted, or failed.
+- An operation MAY enqueue messages only to queues of its own context (see
+  [queues](./queues.spec.md#declaring-a-queue)).
 - The compiler MUST reject an operation state machine in which any path from the
   start state passes through two states that send a command, or through one such
   state twice.
@@ -96,7 +106,8 @@ own response, such as an HTTP status:
 - A result value that does not match the result shape MUST end the operation as
   failed.
 - When an operation's command is accepted and the operation then fails, the
-  command's change stands. The failure MUST say so.
+  command's change and its atomically enqueued messages stand. The failure MUST
+  say so.
 
 ## Invoked more than once
 

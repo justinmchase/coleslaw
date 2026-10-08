@@ -18,7 +18,9 @@ capitals.
 2. **Mode.** Select the mode from the input (see
    [modes](./modes.spec.md#selecting-a-mode)).
 3. **Reach.** Find what the mode reaches: its entry points, the managers they
-   use, the reactors that run in process, and the services all of those use.
+   use, the reactors selected to run in process or events mode, the queues
+   managers and reactors enqueue to or consumers handle, the external event
+   sources reactors handle, and the services all of those use.
 4. **Config.** Parse the input into config, checking only the settings the mode
    reaches (see [config](./config.spec.md#parsing-input-into-config)).
 5. **Application.** Construct the services the mode reaches, then the managers
@@ -52,9 +54,16 @@ which the implementor writes for particular technologies.
 - An implementation MAY declare its own settings, such as a connection string.
   They MUST be part of the config, under the service's settings, and are checked
   only when that implementation is chosen.
-- Coleslaw MUST provide in-memory implementations of the services the runtime
-  itself needs, such as aggregate state storage and event delivery, so a program
-  runs locally with no technology chosen.
+- A queue's implementations MUST be provided and chosen as a service's are (see
+  [queues](./queues.spec.md#implementations)).
+- An external event source's implementation MUST be provided and chosen through
+  config as the selected mode reaches it (see
+  [external events](./reactors.spec.md#external-events)).
+- Coleslaw MUST provide default implementations of the services the runtime
+  itself needs, in memory where they store data, such as the state store and the
+  event source (see [runtime](./runtime.spec.md)), and an HTTP server (see
+  [controllers](./controllers.spec.md)), so a program runs locally with no
+  technology chosen.
 
 ## Open questions
 

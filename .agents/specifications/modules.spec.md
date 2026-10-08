@@ -63,8 +63,8 @@ aggregates.
   module imports, so a context MAY gather declarations from any modules,
   wherever they are.
 - A member MUST be an aggregate, a projection, a manager, a reactor, a
-  controller, a consumer, or a job. These are owned: each MUST be a member of at
-  most one context in a program.
+  controller, a consumer, a queue, or a job. These are owned: each MUST be a
+  member of at most one context in a program.
 - Shapes, funcs, and service declarations hold no state and are not owned.
   Contexts MAY use them freely, and a body MAY list them so that the context can
   export them.
@@ -79,9 +79,10 @@ aggregates.
   such as `export Product.ProductDiscontinued;`.
 - A context MAY export events, projections, shapes, and funcs, which other
   contexts use, and controllers, consumers, jobs, and reactors, which modes run.
-- A context MUST NOT export aggregates, managers, or services. Its aggregates
-  change only through its own managers and reactors, and its managers are
-  reached only through its own entry points.
+- A context MUST NOT export aggregates, managers, queues, or services. Its
+  aggregates change only through its own managers and reactors, its queues are
+  used only within the context, and its managers are reached only through its
+  own entry points.
 
 ### The boundary
 
@@ -95,9 +96,15 @@ aggregates.
 - A mode MUST reach the entry points and reactors of a context through that
   context, such as `Catalog.CatalogApi`.
 - Owned declarations that are a member of no context belong to the program's
-  default context, which has no name and exports nothing. A program that
-  declares no contexts is entirely in its default context, so a small program
-  needs no context declarations.
+  default context, which has no name and exports nothing to other contexts. A
+  program that declares no contexts is entirely in its default context, so a
+  small program needs no context declarations.
+- A mode MAY reach the default context's entry points and reactors directly, by
+  importing them from their modules, since the default context has no
+  declaration to reach them through.
+- An owned declaration's name MUST be unique within the default context, as
+  within any context. An aggregate kind in the default context is identified by
+  its name alone.
 
 ## Project file
 

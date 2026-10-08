@@ -33,8 +33,8 @@ statements.
   and identity services, and failure.
 - [Managers](./managers.spec.md): operations, their state machines, the one
   command, and results.
-- [Reactors](./reactors.spec.md): reactions, commands and effects, repeats,
-  order, and failure.
+- [Reactors](./reactors.spec.md): reactions to internal and external events,
+  their capabilities, repeats, order, and failure.
 - [Config](./config.spec.md): settings, sources and precedence, naming
   conventions, and parsing input.
 - [Modes](./modes.spec.md): named modes of four kinds, the default, selecting
@@ -43,17 +43,21 @@ statements.
   are imported and chosen.
 - [Modules](./modules.spec.md): imports and exports, contexts and their
   boundary, and packages.
+- [Controllers](./controllers.spec.md): routes, binding requests, responses,
+  authentication, authorization, middleware, and the server.
+- [Queues](./queues.spec.md): program-owned work messages, the outbox, delivery
+  to consumers, dispositions, dead letters, and order groups.
+- [Consumers](./consumers.spec.md): binding queue messages to managers and the
+  state machine a handling runs.
+- [Jobs](./jobs.spec.md): declarations, arguments and their names, selecting a
+  job, the job's state machine, how a job ends, and running again.
+- [Runtime](./runtime.spec.md): storing aggregate state, handling commands, the
+  retry bound, and recording and delivering events and outbox messages.
 
 ## Planned chapters
 
 These are not written yet. They are listed so that new chapters fit the intended
 shape.
-
-- `controllers/`: routes, authentication, authorization, and middleware.
-- `consumers`: queues, messages, and binding them to managers.
-- `jobs`: job declarations and their arguments.
-- `runtime`: storing aggregate state, recording and delivering events, and the
-  retry bound.
 
 ### Fundamental patterns
 

@@ -1,9 +1,9 @@
 # Reactors
 
-This chapter defines reactors: how the program reacts to events by sending
-commands and changing the world. It covers declaring a reactor, the state
-machine each reaction runs, the order events arrive in, and what happens when a
-reaction fails. Where reactors run is defined in the overview's
+This chapter defines reactors: how the program reacts to its own and other
+applications' events. It covers declaring a reactor, the state machine each
+reaction runs, the order events arrive in, and what happens when a reaction
+fails. Where reactors run is defined in the overview's
 [modes](./overview.spec.md#modes). Terms are defined in the
 [glossary](./glossary.spec.md).
 
@@ -16,11 +16,39 @@ capitals.
 ## Declaring a reactor
 
 - A reactor declaration MUST name the reactor and declare the events it reacts
-  to, each named by its aggregate kind and event.
+  to.
+- A reactor MUST declare whether it handles internal events, which name an
+  aggregate kind and event, or external events, which name an event from an
+  external source. A reactor MUST NOT mix internal and external events.
 - A reactor MAY guard an event with a pattern its payload and record must match.
   An event that does not match is handled by doing nothing.
 - Every event a reactor reacts to MUST be delivered to it. Two reactors that
   react to the same event each receive it, independently.
+
+## External events
+
+External events are facts another application publishes in its own vocabulary.
+An external-event reactor translates those facts into this program's vocabulary
+by invoking its managers. Their vocabulary and schema evolve outside this
+program, so the translation belongs at the boundary; keeping external reactors
+to managers prevents foreign data from directly driving aggregates or effects.
+
+- An external event MUST have a declared name and a shape for its payload. Its
+  source implementation MUST deliver the payload with a stable source identity
+  and delivery count.
+- An external-event reactor MUST invoke managers only. It MUST NOT send
+  aggregate commands, read projections, call services, or enqueue messages
+  directly. A manager it invokes may use its ordinary capabilities, including
+  sending messages atomically with an accepted command (see
+  [managers](./managers.spec.md#the-command)).
+- An external event's source MUST deliver it at least once. A failed reaction
+  MUST be run again from its start state with the same source identity.
+- External events MUST be handled in events mode. The source implementation
+  MUST preserve any ordering guarantee the external source declares; absent such
+  a guarantee, events MAY arrive in any order.
+- External events MUST NOT be treated as this program's aggregate events or
+  recorded in the aggregate event log. Handling them MUST NOT change the
+  outcome of any aggregate command.
 
 ## Reactions
 
@@ -38,6 +66,8 @@ reaction progresses.
   - call a query or an effect of a service (see [services](./services.spec.md));
   - read a projection;
   - send a command to an aggregate;
+  - invoke an operation of a manager;
+  - enqueue a message to a queue (see [queues](./queues.spec.md#sending));
   - or none, to choose the next state from the variables alone.
 - A step's arguments MUST be computed by expressions from the event, its record,
   and the variables.
@@ -49,10 +79,13 @@ reaction progresses.
 - Given the same event and the same step results, a reaction MUST take the same
   path. Its only variation is what its steps return.
 
-## Commands and effects
+## Commands, messages, and effects
 
 - A reaction MAY send several commands and call several effects, in the order
   its machine performs them.
+- An internal-event reaction MAY invoke managers and enqueue messages as well.
+  An external-event reaction is limited to managers, as
+  [external events](#external-events) requires.
 - Each command a reaction sends MUST be handled as its own transaction (see
   [handling a command](./aggregates.spec.md#handling-a-command)). A reaction
   never makes two aggregates one unit of consistency.
@@ -122,6 +155,11 @@ an expression fails.
 
 ## Open questions
 
+- **External event declarations.** How a program names and imports another
+  application's event source, and how it pins or evolves that event's shape.
+- **External ordering.** How an external source declares its ordering
+  guarantees, and whether Coleslaw can require an ordering the source does not
+  provide.
 - **Events that always fail.** A reaction that fails every time holds up every
   later event with its shard key for that reactor. How the runtime notices it,
   how long it keeps trying, and where such an event goes.

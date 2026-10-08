@@ -96,8 +96,14 @@ from the segments themselves, so that a name maps back to exactly one path.
 Coleslaw declares some settings itself, in every program:
 
 - `mode`: the mode to run (see [modes](./modes.spec.md#selecting-a-mode)).
-- the implementation and settings of each service the selected mode reaches (see
-  [startup](./startup.spec.md#services)).
+- `job`: in a job mode, the job to run, and that job's arguments under a segment
+  named for it (see [jobs](./jobs.spec.md#selecting-a-job)).
+- `commandAttempts`: the retry bound for conflicted commands (see
+  [runtime](./runtime.spec.md#the-retry-bound)).
+- the implementation and settings of each service, queue, and external event
+  source the selected mode reaches (see [startup](./startup.spec.md#services),
+  [queues](./queues.spec.md#implementations), and
+  [reactors](./reactors.spec.md#external-events)).
 
 ## Open questions
 

@@ -26,7 +26,7 @@ capitals.
   The same word MAY mean different things in different contexts, and contexts
   integrate only through what each exports, mainly events.
 - **Member**: an aggregate, projection, manager, reactor, controller, consumer,
-  or job that a context lists, and that belongs to that context alone.
+  queue, or job that a context lists, and that belongs to that context alone.
 - **Default context**: the unnamed context of every owned declaration that no
   context lists. It exports nothing.
 - **Package**: modules published together under one name and version, imported
@@ -71,6 +71,10 @@ capitals.
   example `Published`). It carries a payload. Every change to an aggregate is
   described by an event, which is delivered to what observes it and is then no
   longer part of the program's working state. Events are immutable.
+- **Internal event**: an event emitted by an aggregate in this program.
+- **External event**: a fact published by another application, in its
+  vocabulary, and delivered through a declared event source. It is not an
+  aggregate event of this program.
 - **Stored state**: an aggregate's machine state and version, as saved by its
   last accepted command. It is the source of truth for the aggregate.
 - **Version**: the number of events that have changed an aggregate. Each event's
@@ -84,10 +88,11 @@ capitals.
   in order; nothing else is ordered.
 - **Entity**: a value inside an aggregate with an identity unique only within
   that aggregate, such as a line of an order.
-- **Outcome**: how handling a command ends: accepted, with the new state saved
-  and its events recorded; rejected, with a reason; conflicted, when concurrent
-  changes outlasted the runtime's retries; or failed, with an error, when
-  handling met a defect in the program.
+- **Outcome**: how handling a command ends: accepted, with its state change,
+  events, and any manager-enqueued messages saved; rejected, with a reason;
+  conflicted, when concurrent changes outlasted the runtime's retries; or
+  failed, with an error, when handling met a defect in the program or a failed
+  call to a runtime service.
 - **Rejection**: a decision to refuse a command, with a reason. A rejection is a
   normal business outcome, not an error.
 - **Conflict**: a save that failed because the aggregate's stored version
@@ -154,35 +159,74 @@ capitals.
 - **Operation**: one business operation of a manager: it binds its input and
   progresses one aggregate with at most one command. Any further logic is a
   state machine that lasts for the invocation and is never stored.
-- **Reactor**: a declaration that reacts to events by sending commands and
-  calling services. Depending on the config, it runs in the process that saved
-  the events or, in events mode, as an entry point.
+- **Reactor**: a declaration that reacts to internal events from this program
+  or external events from another application. Internal-event reactors may use
+  the full reactor capabilities; external-event reactors invoke managers only.
 - **Reaction**: one reactor handling one event, by a state machine that lasts
   for the reaction and is never stored. A failed reaction is run again.
-- **Event source**: a service that delivers events to events mode, such as a
-  Kafka topic.
+- **Event source**: an implementation that supplies internal or external events
+  to reactors in events mode. Internal events are accepted from processes that
+  save them; external events are supplied by another application's source.
+- **Runtime service**: a service Coleslaw declares for the runtime's own needs,
+  such as the state store and the event source. Only the runtime calls it; the
+  config chooses its implementation, and Coleslaw provides one in memory.
+- **State store**: the runtime service that keeps aggregates' stored states and
+  the event records saved with them until they are delivered.
+- **Retry bound**: the greatest number of attempts the runtime makes to handle
+  one command that keeps conflicting, set by the `commandAttempts` setting.
 - **Service**: a capability the program declares and the host program
   implements, such as sending email or charging a card. Services are the edge of
   the program.
 - **Query**: a service operation that returns information and changes nothing.
   Managers and reactors may call queries.
 - **Effect**: a service operation that changes the world outside the program.
-  Only reactors may call effects.
-- **Controller**: a set of routes by which the outside world invokes managers.
-- **Queue**: a durable, ordered source of messages, such as a message broker's
-  queue or topic subscription, provided by a service.
-- **Message**: one item taken from a queue. Its body is matched against a
-  pattern, like any other input.
-- **Consumer**: a binding from a queue's messages to a manager, in worker mode.
+  Only reactors handling internal events may call effects.
+- **Controller**: a set of routes by which the outside world invokes managers
+  and reads projections, in API mode.
+- **Queue**: a program-owned source of internal work messages, handled by
+  exactly one consumer. A queue declares its message shape and names no
+  technology; managers and internal reactors of its context may enqueue
+  messages, and the runtime delivers them in worker mode.
+- **Message**: one item enqueued to a program-owned queue. Its value matches the
+  queue's declared shape.
+- **Message record**: the message's identity, its origin, the time it was sent,
+  and its delivery count, together with the message itself.
+- **Order group**: an optional key declared by a queue from a message. Messages
+  with the same key are delivered to its consumer in enqueue order; other
+  messages may be handled in any order.
+- **Disposition**: how a consumer's handling of a message ends: acknowledged, so
+  it is not delivered again; dead-lettered, with a reason; or failed, so it is
+  delivered again.
+- **Dead letter**: where a message goes, with its value, identity, and a reason,
+  when the program will not handle it. The program never reads
+  dead letters.
+- **Redelivery bound**: the most times a message is delivered to a consumer
+  before a failing message is dead-lettered.
+- **Consumer**: the one entry point of worker mode that handles a program-owned
+  queue's messages by invoking managers, until stopped.
 - **Job**: a named unit of work that invokes managers and runs once, in job
-  mode. Whatever starts the process, such as cron or a migration step, decides
-  when it runs. Its arguments are matched against a pattern, like any other
+  mode, by a state machine that lasts for the run and is never stored. Whatever
+  starts the process, such as cron or a migration step, decides when it runs.
+  Its arguments are matched against shapes, like any other input.
+- **Job argument**: one named value a job starts with, with a shape. It is a
+  setting of the config only when its job is the one a job mode runs, named
+  under a segment for that job.
+- **Route**: a binding from an external request, an HTTP method and path, to a
+  manager operation or a projection read.
+- **Request**: one HTTP request a route handles. Its path, query string,
+  headers, and body are matched against the route's shapes, like any other
   input.
-- **Route**: a binding from an external request, such as an HTTP method and
-  path, to a manager.
+- **Response**: what a route gives for a request: a status, header fields, and a
+  body.
+- **Pipeline**: an ordered composition of middleware steps and other pipelines
+  around a controller's routes.
 - **Middleware**: a step that runs around a controller's routes, such as logging
   or rate limiting, and carries no business logic.
 - **Authentication**: establishing who is making a request; its result is the
   request's principal.
 - **Principal**: the authenticated identity a request acts as.
 - **Authorization**: deciding whether a principal may invoke a route.
+- **Authorization rule**: a pattern over a principal and a request that must
+  match for the request to proceed.
+- **Public route**: a route declared to need no authentication, so it has no
+  principal.
