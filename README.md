@@ -93,6 +93,23 @@ redacted diagnostics. Precedence is named flags, positional bindings,
 environment input, then pattern defaults. Resolve selector settings first;
 credentials needed only by unselected modes are not required.
 
+The [config specification](./.agents/specifications/config.spec.md) treats
+config as an object pattern: map source names to setting paths, merge raw
+strings by precedence, then match and project them into canonical config values.
+Patterns perform parsing and coercion, not the source-merging layer. For
+example:
+
+```text
+githubAppId: Number? -> (toint (default _ 372035));
+```
+
+Here `Number` matches numeric text (`string & [Digit+]`); `toint` produces the
+integer. Invalid supplied text must fail, not fall back to a default. The
+[deploy approval config design](./examples/design/deploy-approval-config.clsw)
+shows the full declaration, with credentials marked `secret` for redaction.
+Unwrapped setting patterns and these common text-pattern/function names are
+specified design syntax, not yet implemented by the current shell.
+
 Reusable shapes and explicitly shaped mode parameters are supported:
 
 ```text

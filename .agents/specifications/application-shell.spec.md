@@ -33,6 +33,10 @@ capitals.
 - A named config MUST contain a tree of settings with Uffda patterns, including
   nested groups and the `secret` modifier. Secret values MUST NOT appear in
   diagnostics. Defaults, optionality, and parsing MUST be expressed by patterns.
+- Each setting MUST use `identifier: Pattern;`; wrapping parentheses MUST be
+  optional. Source values MUST be merged before matching and projection, and
+  projections MUST supply the canonical config values under
+  [config](./config.spec.md#parsing-input-into-config).
 - A program MUST bind one config declaration to a local name and declare a
   mapping from a setting's value to mode references, optionally with arguments.
   Labels such as `api` and `job` MAY differ from mode declaration names.

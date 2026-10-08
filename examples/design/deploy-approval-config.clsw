@@ -1,0 +1,15 @@
+# Design example: common text patterns/functions and unwrapped config patterns
+# are not yet implemented by the current application shell.
+# Number matches numeric text (string & [Digit+]); toint converts it.
+export config ShellSettings {
+  githubAppId: Number? -> (toint (default _ 372035));
+  secret githubPrivateKey: String;
+  githubWebhookPath: String? -> (default _ "/github_webhook");
+  secret githubWebhookSecret: String?;
+  secret mongoConnectionString: String;
+  azureTenantId: String? -> (default _ "bb47d1e0-0ffb-4077-a04e-352c73ebebfa");
+  azureClientId: String? -> (default _ "1a9fa409-389c-4da1-877a-fe20bca08edd");
+  secret azureClientSecret: String?;
+  azureB2CWorkflow: String? -> (default _ "B2C_1_deploy_approval_signup_and_signin");
+  appOrigin: String? -> (default _ "localhost:8080");
+}

@@ -14,6 +14,11 @@ capitals.
 
 - A program MUST declare its config: a tree of named settings, each with a
   shape.
+- A config declaration MUST describe an object pattern. Each setting MUST use
+  `identifier: Pattern;`, where `Pattern` is any Uffda pattern satisfying
+  Coleslaw's data and purity constraints, including optionality, intersections,
+  unions, and projections. Parentheses MAY group a pattern but MUST NOT be
+  required around every setting pattern.
 - A setting MAY give a default, or be optional, through its shape (see
   [patterns as types](./patterns-as-types.spec.md#the-value-a-shape-gives)). A
   setting with neither is required.
@@ -22,6 +27,39 @@ capitals.
 - Config MUST accept only data (see
   [patterns as types](./patterns-as-types.spec.md#data)).
 - Config MUST NOT depend on any other declaration of the program.
+- Common patterns and pure conversion functions provided by the language MAY be
+  used without introducing a dependency on application declarations.
+
+### Text matching and projection
+
+```text
+export config ShellSettings {
+    githubAppId: Number? -> (toint (default _ 372035));
+    secret githubPrivateKey: String;
+    githubWebhookPath: String? -> (default _ "/github_webhook");
+    secret githubWebhookSecret: String?;
+    mongoConnectionString: String;
+}
+```
+
+Here `String` matches source text and `Number` denotes a numeric-text pattern,
+such as `string & [Digit+]` with a resolved `Digit` pattern. `Number` in this
+example MUST match the string, not silently convert it to a numeric value.
+`toint` performs the explicit conversion after a successful match; `_` is the
+matched value passed to the projection.
+
+- Common text patterns MUST specify the exact text they accept. The illustrated
+  digit-only pattern MUST NOT imply support for signs, fractions, exponents,
+  whitespace, or empty text.
+- `default` in these examples MUST supply its fallback only for an absent value.
+  A present value that fails the pattern or conversion MUST be reported as
+  invalid, not replaced with the default.
+- The projected value MUST become the setting's config value. It MUST NOT be
+  rematched against the source-text pattern: `githubAppId` above becomes an
+  integer, not a string.
+- Projections MUST be pure and produce only data. Conversion failures MUST be
+  surfaced explicitly with secret-safe diagnostics; coercion MUST NOT be
+  performed implicitly by the source-merging layer.
 
 ## Sources
 
@@ -29,8 +67,8 @@ A process's input comes from two sources built into Coleslaw. When both supply a
 setting, the command line wins over the environment.
 
 Programs MAY additionally declare positional command-line bindings under
-[application shell](./application-shell.spec.md#settings-and-selection).
-Named flags take precedence over positionals; both precede the environment.
+[application shell](./application-shell.spec.md#settings-and-selection). Named
+flags take precedence over positionals; both precede the environment.
 
 - **Command line**: flags, such as `--database.url postgres://...`.
 - **Environment**: variables, such as `DATABASE__URL=postgres://...`.
@@ -83,14 +121,29 @@ from the segments themselves, so that a name maps back to exactly one path.
 
 ## Parsing input into config
 
+- The runtime MUST first map supplied source names to declared setting paths and
+  merge their raw values according to per-setting precedence. Merging MUST NOT
+  execute patterns, projections, defaults, or coercions.
+- The resulting input MUST be an object with the config declaration's nested
+  structure. A missing setting MUST remain absent; the runtime MUST NOT invent
+  an empty string, null, or a typed default.
 - Values from every source arrive as strings. A setting's shape MUST parse them:
   for example, a number setting's shape matches a string of digits and projects
   the number (see
   [patterns as types](./patterns-as-types.spec.md#the-value-a-shape-gives)).
+- Only the winning raw value for a setting MUST be matched and projected.
+  Invalid higher-precedence input MUST NOT fall back to a lower-precedence
+  source or a pattern default.
 - After every setting has been taken from its sources, the whole config MUST
   match the config declaration. Input that does not MUST stop the process before
   anything is constructed, with a diagnostic naming every setting that failed,
   its source, and what was expected, but never a secret's value.
+- Matching and projecting the config object MAY be staged for mode selection:
+  selector settings are resolved first, then settings reached by the selected
+  mode. Unselected-mode-only settings MUST NOT become required merely because
+  their values are included in the merged input. The resolved config object MUST
+  contain canonical projected values for the reached settings before any
+  component is constructed.
 - Input that names no setting, such as an unknown flag, MUST stop the process
   the same way. An environment variable that names no setting is ignored, since
   the environment holds variables for other programs too.
@@ -104,8 +157,8 @@ Coleslaw declares some settings itself, in every program:
   named for it (see [jobs](./jobs.spec.md#selecting-a-job)).
 - `commandAttempts`: the retry bound for conflicted commands (see
   [runtime](./runtime.spec.md#the-retry-bound)).
-- query policy overrides: optional per-setting overrides of Coleslaw and
-  program defaults, before endpoint read-limit overrides (see
+- query policy overrides: optional per-setting overrides of Coleslaw and program
+  defaults, before endpoint read-limit overrides (see
   [queries](./queries.spec.md#defaults-and-overrides)). These MUST NOT change a
   mode's traversal capability.
 - the implementation and settings of each service, queue, and external event
@@ -115,6 +168,10 @@ Coleslaw declares some settings itself, in every program:
 
 ## Open questions
 
+- **Common parsing catalog.** Exact exported names and accepted text for common
+  patterns such as `Number`, `String`, and `Digit`, and the conversion ranges
+  and failure contracts of functions such as `toint`. The examples specify their
+  intended roles, not an already released Uffda API.
 - **Structured settings.** Every source gives strings, so a setting holding a
   list or an object must be parsed from one, such as JSON in a variable. Whether
   Coleslaw defines a standard way to do so.
