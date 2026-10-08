@@ -28,11 +28,15 @@ events; those reach reactors (see
 - A consumer MUST be a member of the context of the managers it invokes, since
   a context's managers are reached only through its own entry points (see
   [modules](./modules.spec.md#the-boundary)).
+- A consumer MUST belong to its queue's context; consuming another context's
+  queue MUST be a compile error.
 - A consumer MAY guard messages with a pattern the message and record must
   match. A message that does not match the guard MUST be acknowledged without
   invoking a manager.
-- Processes running the same consumer MUST share its delivery: a message is
-  handled by only one of them at a time.
+- Processes running the same consumer MUST share its delivery: each queue item
+  has at most one valid lease at a time. An old handling may overlap a new one
+  after its lease expires, and duplicate submissions may create separate items
+  (see [queues](./queues.spec.md#delivery)).
 
 ## Messages that do not match
 
@@ -91,9 +95,9 @@ messages, is an aggregate an operation progresses.
 - A final state MUST give the handling's disposition (see
   [dispositions](#dispositions)): acknowledge, or dead-letter with a reason
   computed by expressions from the message, its record, and the variables.
-- Given the same message and the same step results, a consumer's state machine
-  MUST take the same path and give the same disposition. Its only variation is
-  what its steps return.
+- Given the same message, delivery record, and step results, a consumer's state
+  machine MUST take the same path and give the same disposition. Redelivery may
+  change the delivery count and step results.
 
 ## Several operations
 
@@ -110,7 +114,8 @@ messages, is an aggregate an operation progresses.
 A handling ends in exactly one disposition, which the runtime carries out
 through the queue implementation (see [queues](./queues.spec.md#delivery)):
 
-- **Acknowledged**: the message is handled and MUST NOT be delivered again.
+- **Acknowledged**: the queue item is handled and MUST NOT be delivered again.
+  A separately accepted duplicate copy may still arrive.
 - **Dead-lettered**, with a reason: the message cannot be handled and MUST be
   sent to a dead letter.
 - **Failed**, with an error: the handling did not complete and the message MUST
@@ -146,8 +151,11 @@ So every step a handling performs may be performed again for the same message.
 
 - The runtime MUST NOT promise more than at-least-once delivery, whatever a
   queue implementation offers.
-- A consumer MUST give the same disposition when it handles a message again.
-  The operations an earlier attempt invoked are invoked again.
+- A consumer MUST be written to tolerate repeated handling without repeating a
+  business change that has already happened. Its operations MAY return different
+  results on redelivery, so the new handling may take a different path and give
+  a different disposition. With the same message, record, and step results,
+  the state machine MUST remain deterministic.
 - A consumer MUST NOT try to recognize a repeat itself, such as by remembering
   message identities. Whether a repeated command changes anything is its
   aggregate's decision (see

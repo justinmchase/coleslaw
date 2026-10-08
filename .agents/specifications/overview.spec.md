@@ -78,8 +78,9 @@ patterns as its types and Uffda expressions as its expression language.
   managers.
 - A manager operation binds its input, chooses the aggregate it concerns, and
   progresses it by sending it at most one command. It MAY enqueue messages
-  atomically with that command. Any logic it needs beyond that MUST be expressed
-  as a state machine that lasts for the invocation (see
+  atomically with that command when it is accepted and emits events. An ignored
+  zero-event command MUST enqueue nothing. Any logic it needs beyond that MUST
+  be expressed as a state machine that lasts for the invocation (see
   [managers](./managers.spec.md)).
 - A reactor is registered for internal or external events, and its logic MUST
   be expressed as one or more state machines. An internal-event reactor may
@@ -87,9 +88,9 @@ patterns as its types and Uffda expressions as its expression language.
   invoke managers, and send queue messages. An external-event reactor MUST
   invoke managers only, so it translates a foreign vocabulary at the program's
   boundary (see [reactors](./reactors.spec.md#external-events)).
-- Service operations are queries or effects. Managers and reactors MAY call
-  queries; only reactors handling internal events MAY call effects, so the
-  world changes only after the program has (see
+- Service operations are queries or effects. Managers and internal-event
+  reactors MAY call queries; only internal-event reactors MAY call effects, so
+  the world changes only after the program has (see
   [services](./services.spec.md)).
 - A reactor MUST NOT run inside the transaction of the command whose event it
   reacts to. Each command a reaction sends is its own transaction, so one
@@ -157,8 +158,9 @@ of them.
 
 - Each mode's entry points MUST exist only in that mode: controllers only in API
   mode, consumers only in worker mode, and jobs only in job mode.
-- Reactors run in one of two ways, and the config, not the program, MUST decide
-  which. The same program MUST run either way without change.
+- Internal-event reactors run in one of two ways, and the config, not the
+  program, MUST decide which. The same program MUST run either way without
+  change.
   - **Distributed.** Processes that save events publish them to an event source,
     such as a Kafka topic provided by a service, and a separate process in
     events mode receives them and runs the reactors. This suits production,
@@ -170,11 +172,16 @@ of them.
   reacts to is saved, events reach each reactor in order per shard key (see
   [reactors](./reactors.spec.md#order)), and the program cannot tell which way
   it is running.
+- External-event reactors run in events mode, receiving events from their
+  configured external sources. They are not run by the process that saves this
+  program's aggregate events (see [reactors](./reactors.spec.md#external-events)).
 - Events are delivered to reactors at least once. The runtime MUST NOT promise
-  more, whichever way reactors run and whatever an event source offers, and a
-  reactor MUST give the same result when it receives an event it has already
-  handled. An event is identified by its aggregate's kind and identity and its
-  version, so a repeat can always be recognized.
+  more, whichever way reactors run and whatever an event source offers.
+  Reactors MUST tolerate repeated steps without repeating a business change
+  that has already happened; step results and reaction paths may differ on
+  redelivery. An internal event is identified by its aggregate's kind and
+  identity and its version. An external event is identified by its source and
+  that source's stable event identity.
 - A job's schedule is not part of the program. Whatever starts the process, such
   as cron or a deployment's migration step, decides when a job runs.
 - The runtime MUST construct only what the selected mode reaches: its entry

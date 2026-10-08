@@ -92,7 +92,8 @@ capitals.
   events, and any manager-enqueued messages saved; rejected, with a reason;
   conflicted, when concurrent changes outlasted the runtime's retries; or
   failed, with an error, when handling met a defect in the program or a failed
-  call to a runtime service.
+  call to a runtime service. A failed command may have committed when Save's
+  result is unknown; its error says that its change and messages may stand.
 - **Rejection**: a decision to refuse a command, with a reason. A rejection is a
   normal business outcome, not an error.
 - **Conflict**: a save that failed because the aggregate's stored version
@@ -171,14 +172,19 @@ capitals.
   such as the state store and the event source. Only the runtime calls it; the
   config chooses its implementation, and Coleslaw provides one in memory.
 - **State store**: the runtime service that keeps aggregates' stored states and
-  the event records saved with them until they are delivered.
+  the event and message records saved with them until they are relayed.
+- **Outbox**: pending event and message records committed in the state store,
+  which the runtime relays after commit. Manager messages are saved atomically
+  with a command's state and events; reactor messages are appended durably by
+  their send steps.
 - **Retry bound**: the greatest number of attempts the runtime makes to handle
   one command that keeps conflicting, set by the `commandAttempts` setting.
 - **Service**: a capability the program declares and the host program
   implements, such as sending email or charging a card. Services are the edge of
   the program.
 - **Query**: a service operation that returns information and changes nothing.
-  Managers and reactors may call queries.
+  Managers and internal-event reactors may call queries directly;
+  external-event reactors invoke managers only.
 - **Effect**: a service operation that changes the world outside the program.
   Only reactors handling internal events may call effects.
 - **Controller**: a set of routes by which the outside world invokes managers
@@ -188,20 +194,30 @@ capitals.
   technology; managers and internal reactors of its context may enqueue
   messages, and the runtime delivers them in worker mode.
 - **Message**: one item enqueued to a program-owned queue. Its value matches the
-  queue's declared shape.
+  queue's declared shape; its identity is derived from the queue and its origin
+  and remains stable across repeats of the same send.
+- **Queue item**: one copy of a message accepted by the queue implementation.
+  Duplicate submissions may create separate items with the same message
+  identity. A disposition completes an item, not every possible duplicate copy.
+- **Lease**: temporary ownership of one queue item by a process running its
+  consumer. An expired lease permits redelivery; it cannot undo work the old
+  process already started.
 - **Message record**: the message's identity, its origin, the time it was sent,
-  and its delivery count, together with the message itself.
+  its recorded order-group key when declared, and the current queue item's
+  delivery count, together with the message itself.
 - **Order group**: an optional key declared by a queue from a message. Messages
-  with the same key are delivered to its consumer in enqueue order; other
-  messages may be handled in any order.
-- **Disposition**: how a consumer's handling of a message ends: acknowledged, so
-  it is not delivered again; dead-lettered, with a reason; or failed, so it is
-  delivered again.
+  first relayed with the same key are delivered in outbox commit order; separate
+  duplicate copies may arrive later. Other groups may be handled in any order.
+- **Disposition**: how a consumer's handling of a queue item ends: acknowledged,
+  so that item is not delivered again; dead-lettered, with a reason; or failed,
+  so it is delivered again subject to the redelivery bound. Its result may be
+  unknown if the queue implementation cannot confirm it.
 - **Dead letter**: where a message goes, with its value, identity, and a reason,
   when the program will not handle it. The program never reads
   dead letters.
-- **Redelivery bound**: the most times a message is delivered to a consumer
-  before a failing message is dead-lettered.
+- **Redelivery bound**: the greatest number of deliveries of one queue item,
+  including its first delivery. A failure at the bound, or a later delivery
+  after a lost disposition, dead-letters the item.
 - **Consumer**: the one entry point of worker mode that handles a program-owned
   queue's messages by invoking managers, until stopped.
 - **Job**: a named unit of work that invokes managers and runs once, in job

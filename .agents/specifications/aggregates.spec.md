@@ -54,11 +54,17 @@ Handling a command is one transaction on one aggregate:
    invariants. If it does not satisfy them, the command MUST be rejected.
 5. **Save.** Store the new state, with its version increased by the number of
    events, on the condition that the stored version is still the one read at the
-   load step. In the same transaction, record the emitted events for delivery.
+   load step. In the same transaction, record the emitted events and any
+   manager-attached messages for delivery (see
+   [queues](./queues.spec.md#sending)). A zero-event decision saves nothing and
+   enqueues no messages.
 
 - A command MUST change at most one aggregate.
-- If any step fails, nothing MUST be saved and no event MUST be recorded: a
-  command's new state and its events are saved together or not at all.
+- A command's new state, events, and any manager-attached messages MUST be saved
+  together or not at all. A step that fails before commit MUST save nothing.
+  When Save's commit result is unknown, the command MUST fail with a warning
+  that its change and messages may stand (see
+  [runtime](./runtime.spec.md#outcomes)).
 - A command sent to an identity with no stored state is handled by the state
   machine's start state, with the initial state. This is how aggregates are
   created.
@@ -70,7 +76,7 @@ sent it:
 
 - **Accepted**, with the new state saved and its events recorded. An accepted
   command MAY have emitted no events, when its handler emits none; then the
-  state and its version are unchanged.
+  state and its version are unchanged, and no messages are enqueued.
 - **Rejected**, with the reason. Nothing was saved. A rejection is a normal
   business outcome, not an error.
 - **Conflicted**: concurrent commands kept changing the aggregate, and the
@@ -78,7 +84,9 @@ sent it:
 - **Failed**, with an error: handling met a defect in the program, such as a
   failed expression (see [expressions](./expressions.spec.md#failure)) or a
   stored state the program no longer accepts (see
-  [fields](./aggregates/fields.spec.md#invariants)). Nothing was saved. Unlike a
+  [fields](./aggregates/fields.spec.md#invariants)) or a failed storage call.
+  Nothing was saved unless Save committed but its result could not be learned;
+  then the error MUST say that the change and messages may stand. Unlike a
   rejection, a failure is not a business outcome.
 
 ## Events after saving
@@ -117,8 +125,9 @@ each other, and conflicts are detected when the new state is saved.
 - The runtime MUST stop after a bounded number of attempts and report the
   command as conflicted (see [runtime](./runtime.spec.md#the-retry-bound)).
 - Creating an aggregate is covered by the same rule: the expected version of an
-  aggregate with no stored state is zero, so two commands racing to create one
-  aggregate cannot both succeed.
+  aggregate with no stored state is zero, so two event-emitting commands racing
+  to create it cannot both save against version zero. A zero-event accepted
+  command creates no stored aggregate.
 
 ## Determinism
 

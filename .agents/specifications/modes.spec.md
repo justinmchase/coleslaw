@@ -45,9 +45,10 @@ Coleslaw defines four kinds of mode. Each runs one kind of entry point.
 - The kinds are built in. The design of mode kinds MUST allow extensions to add
   kinds later (see the planned `extensions` chapter), so nothing about a kind
   may be special-cased where the runtime selects or runs a mode.
-- Reactors that run in process are not an entry point of any mode: they run in
-  whichever mode saved the events, when the config says reactors run in process
-  (see the overview's [modes](./overview.spec.md#modes)).
+- Internal-event reactors that run in process are not an entry point of any
+  mode: they run in whichever mode saved the events, when the config says
+  internal-event reactors run in process (see the overview's
+  [modes](./overview.spec.md#modes)).
 
 ## Selecting a mode
 

@@ -54,18 +54,32 @@ the program relies on; it names no technology.
 
 - A message is data matching its queue's shape.
 - The runtime MUST give each delivery the message, the queue, a stable message
-  identity, the message's origin, its sent time, and its delivery count.
-- The runtime MUST assign an identity when a message is first appended to the
-  outbox and MUST preserve it across relay retries and queue redeliveries.
-- Repeating a handling MAY create a second logical message; consumers MUST
-  tolerate at-least-once delivery.
-- The message's origin MUST identify the manager command or reaction step that
-  enqueued it. For a reaction, it MUST include the triggering event identity
-  and the step that sent the message, so a repeated reaction can be recognized.
+  identity, the message's origin, its sent time, its recorded order-group key
+  when declared, and its delivery count.
+- A manager-enqueued message's origin MUST identify the accepted command by its
+  aggregate kind, identity, and ending version, together with the message's
+  position in that command's declared messages.
+- A reaction-enqueued message's origin MUST identify the triggering event by
+  its aggregate kind, identity, and version, together with the reactor's
+  context and name, the sending state, and the number of visits to that state
+  in the reaction, counting from one.
+- A message's identity MUST be derived deterministically from its queue's
+  context and name and its origin. It MUST be preserved across relay retries
+  and queue redeliveries. Running the same reactor send step again for the same
+  event MUST yield the same identity; another reactor or another visit to the
+  state MUST yield a different identity.
+- Stable identity does not promise that a message is delivered only once.
+  Consumers MUST tolerate repeated copies with that identity.
 - The sent time MUST come from the clock service (see
   [provided services](./services.spec.md#provided-services)).
-- The delivery count MUST be the number of times the message has been delivered
-  to its consumer, including this delivery.
+- The delivery count MUST be the number of times the current queue item has
+  been delivered to its consumer, including this delivery. Separate duplicate
+  copies have separate delivery counts.
+- A committed message's value, origin, identity, sent time, and order-group key
+  MUST remain unchanged across its relay retries and its queue item's
+  redeliveries. A repeated reaction may observe different step results and
+  submit another copy with the same identity; it MUST NOT rewrite an already
+  committed record.
 
 ## Sending
 
@@ -78,16 +92,20 @@ not a change to the outside world.
   sender, naming the queue, the path that failed, and what was expected.
 - A manager MAY enqueue messages only with its one aggregate command. The
   runtime MUST write those messages to the outbox atomically with the command's
-  accepted state and event records. If the command is rejected, conflicted, or
-  failed, none of those messages MUST be enqueued. For an accepted command that
-  emits no events, the runtime MUST write any messages atomically with the
-  acceptance of the command, without changing the aggregate version.
+  accepted state and event records, and only when the command emits at least
+  one event. A command accepted with no events MUST enqueue no messages: an
+  ignored repeat starts no new work. A rejected or conflicted attempt, or one
+  known not to have committed, MUST enqueue nothing.
 - A reaction MAY enqueue a message after the event that caused it has been
   saved. The runtime MUST durably record the message before reporting the send
   step as complete. Once recorded, the message MUST remain deliverable even if
   the reaction later fails.
 - A failed outbox write MUST fail the manager command or reaction. It MUST NOT
   be reported as a successful send.
+- If the runtime cannot learn whether an outbox write committed, it MUST report
+  a failure saying that the command's change and messages, or the reaction's
+  message, may stand. A committed record MUST remain deliverable even when its
+  write was reported as failed (see [runtime](./runtime.spec.md#outcomes)).
 - External-event reactors MUST NOT enqueue messages directly. They may invoke
   managers, whose message sends follow the manager rules above (see
   [external events](./reactors.spec.md#external-events)).
@@ -98,30 +116,51 @@ not a change to the outside world.
   least once. A relay failure MUST leave the message pending for another
   attempt. A queue implementation MAY discard a duplicate with the same
   identity, but consumers MUST NOT rely on exactly-once delivery.
-- A queue implementation MUST lease a delivered message to one process running
-  its consumer at a time. The runtime MUST extend the lease while handling is in
-  progress. An expired lease MUST make the message available again.
+- Each accepted copy of a message is a queue item. A queue implementation MUST
+  lease an item to at most one process running its consumer at a time. The
+  runtime MUST extend the lease while handling is in progress. Expiry or
+  abandonment without a completed disposition MUST make the item available
+  again. A failed handling MUST release its lease unless it is dead-lettered
+  at the redelivery bound.
+- Expiry may happen while the old process is still running, so an old handling
+  may overlap a new one. The runtime MUST stop starting new steps when it
+  learns its lease is lost, but work already started may have taken effect.
+  Lease ownership MUST NOT be treated as an exactly-once guarantee.
 - The runtime MUST carry out a disposition only after the consumer's handling
-  ends. A disposition for an expired lease MUST NOT change a message that may
-  already be leased to another process.
+  ends. A lease MUST identify one queue item and one delivery attempt, so items
+  sharing a message identity cannot acknowledge each other. A disposition for
+  an expired lease MUST NOT change an item that may already be leased to another
+  process.
 - A message that does not match its queue's shape MUST be dead-lettered before
   the consumer runs, with a reason naming the shape, the failing path, and what
   was expected. A message that matches its shape but not the consumer's guard
   MUST be acknowledged without invoking a manager.
 - A dead letter MUST retain the message and its identity with the reason. It
-  MUST be reported with the consumer, queue, identity, and reason, and MUST NOT
-  be delivered again by Coleslaw.
+  MUST be reported with the consumer, queue, identity, and reason. That queue
+  item MUST NOT be delivered again by Coleslaw; a separately accepted duplicate
+  copy with the same message identity may still arrive.
+- A disposition is reported as complete only when the queue implementation
+  confirms it. Failure or an unknown result MUST be reported with the consumer,
+  queue, message identity, and reason. The runtime MUST NOT report
+  acknowledgement or dead-lettering as complete when its result is unknown;
+  the item may be delivered again if the disposition did not take effect.
 
 ### Redelivery bound
 
 - A message whose handling fails MUST be reported with its delivery count and
   failure. It MUST be delivered again until the redelivery bound is reached;
   when it is reached, the message MUST be dead-lettered with the last failure.
-- A queue declaration MAY set the redelivery bound: the most times a message is
-  delivered to its consumer. A queue with no declared bound MUST use the
-  runtime's default.
-- An acknowledged or dead-lettered message MUST NOT be delivered again by
-  Coleslaw. The program MUST NOT read dead letters.
+- A queue declaration MAY set the redelivery bound as a whole number of at
+  least one. It bounds deliveries of one queue item, including the first;
+  its delivery count MUST NOT reset after a failed handling or an expired lease.
+  A queue with no declared bound MUST use the runtime's default.
+- The runtime MUST enforce the bound even if the queue technology has a
+  different retry policy. An item arriving beyond the bound MUST be
+  dead-lettered without invoking its consumer, with a reason naming its
+  delivery count and the exhausted bound.
+- An acknowledged or dead-lettered item MUST NOT be delivered again by
+  Coleslaw. Separate duplicate copies remain possible. The program MUST NOT
+  read dead letters.
 
 ## Order groups
 
@@ -130,12 +169,21 @@ A queue's messages have no order unless its declaration names an order group.
 - A queue MAY declare an order-group key, computed by an expression from the
   message, such as the customer it concerns. A key expression that fails MUST
   fail the enqueueing operation.
-- Messages with the same key MUST be delivered in outbox commit order, one at a
-  time. Messages committed together MUST use the order in which the sender
-  declared them.
-  The next message MUST NOT be leased until the previous one is acknowledged or
-  dead-lettered. A failed handling or requeue keeps its message first in the
-  group.
+- The key MUST be data, compared by data equality, and MUST be recorded in the
+  outbox with the message. Delivery MUST use the recorded key, not recompute it
+  with a later version of the program.
+- Distinct messages first relayed from the outbox with the same key MUST be
+  delivered in outbox commit order. Messages committed together MUST use the
+  order in which the sender declared them.
+- Queue items in one group MUST be leased one at a time. The next item MUST NOT
+  be leased until the previous one is acknowledged or dead-lettered. A failed
+  handling keeps its item first in the group.
+- A duplicate relay submission may produce another queue item later; it MUST
+  retain its recorded identity and group key, but MUST NOT rewind the group
+  past items already completed.
+- Dead-lettering an item lets its group's next item proceed without it.
+  Consumers that rely on group order MUST tolerate that gap and duplicate
+  deliveries.
 - Messages with different keys MAY be delivered in any order and handled at the
   same time. Without an order group, all messages MAY be handled in any order
   and at the same time.
@@ -167,6 +215,19 @@ A queue's messages have no order unless its declaration names an order group.
   or abandon the handlings it has started, as
   [modes](./modes.spec.md#stopping) describes. An abandoned handling has no
   disposition; its lease ends and the message is delivered again.
+
+## Why this design
+
+- Messages attached to a manager command are prepared before Save and committed
+  with it. Sending them after an accepted outcome would lose work if the process
+  stopped between the command and send; sending before Save could start work
+  for a command that later conflicts.
+- Ignored commands enqueue nothing. Accepting a duplicate without new events
+  must not create fresh work just because the manager attached messages again.
+- Stable identities let downstream aggregates recognize repeats without
+  promising exactly-once effects or requiring a permanent deduplication ledger.
+- Leases serialize ownership of a queue item, not all effects of a handling.
+  Losing a lease cannot recall a command already sent to an aggregate.
 
 ## Open questions
 

@@ -32,7 +32,8 @@ the world only ever follows a change to the program.
   is called; that is variation at the program's edge.
 - An effect changes the world outside the program, such as sending an email or
   charging a card.
-- Managers and reactors MAY call queries.
+- Managers and internal-event reactors MAY call queries. External-event reactors
+  MUST NOT call queries directly; they invoke managers only.
 - Only reactors handling internal events MAY call effects. Such a reactor reacts
   to events that have already been saved, so an effect never happens for a
   change the program then refuses. External-event reactors invoke managers only
@@ -54,10 +55,13 @@ effect again for the same event.
 
 - When a reactor calls an effect, the runtime MUST make the event that caused
   the call available to the implementation, identified by its aggregate's kind
-  and identity and its version, so an implementation can recognize a repeat.
+  and identity and its version. It MUST also provide the reactor's context and
+  name, the calling state, and its visit count, counting from one. Together these
+  identify one effect step, distinguishing a repeat from another call for the
+  same event.
 - An effect's implementation SHOULD give the same result when called again for
-  the same event, without repeating the change, for example by passing the
-  event's identification to a provider as an idempotency key.
+  the same effect step, without repeating the change, for example by passing
+  that step's identification to a provider as an idempotency key.
 
 ## Implementations
 
@@ -101,9 +105,10 @@ match its shape.
 - A manager whose query fails ends as failed (see
   [managers](./managers.spec.md#results)). A reactor whose call fails has not
   handled the event, which is delivered again.
-- The runtime MUST NOT retry a failed call by itself. Repeats come from
-  redelivery to reactors, which the program is already written to tolerate.
-  Redelivering a pending event record is not a retry of a call.
+- The runtime MUST NOT retry a failed call as another step of the same
+  invocation. Repeats of domain operations come from redelivery to consumers or
+  reactors. A later relay or delivery attempt MAY call a runtime service again
+  for a pending record; it is not a retry of a domain step.
 
 ## Open questions
 
