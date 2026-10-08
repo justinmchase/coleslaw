@@ -230,3 +230,25 @@ and production adapters until the foundation can express and run a real app.
 Push plan, contract, test, and implementation updates to the same Coleslaw PR
 while open. Clearly identify upstream prerequisites and incomplete runtime
 surfaces. The maintainer reviews and merges; do not merge automatically.
+
+## Implementation progress
+
+The approved plan was merged in #16. Implementation continues in #17.
+
+- The public Uffda integration prerequisites are implemented in
+  [justinmchase/uffda#270](https://github.com/justinmchase/uffda/pull/270).
+  Its tested commit is `61515312d4ead8154b1e6d30f62d2cd6896bddd5`; its CI
+  checks passed. It is not merged or published. Development and CI must use an
+  explicit mapping to this checkout until a compatible JSR release exists.
+- The application-shell specification and requirements are committed, including
+  Web naming, settings selection, explicit composition, and host boundaries.
+- The initial pure aggregate kernel has 17 passing requirement-citing tests.
+  These verify event-driven evolution, ordered transitions, atomic memory saves,
+  bounded conflict retries, immutable identity, and uncertain-save warnings.
+- Grammar, CLI, composition, and runnable examples are being integrated. The
+  application deliverable is not complete until the real domain vertical slice
+  and final end-to-end validation described above pass.
+
+The memory store is a development adapter, not durable production storage or
+event delivery. Modeled errors, attached messages, projections, and production
+delivery are not implemented by the initial aggregate kernel.
