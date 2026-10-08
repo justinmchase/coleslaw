@@ -21,9 +21,10 @@ capitals.
   aggregate's nominal identity contract, including after storage and readback.
   Matching primitive representations MUST NOT erase the declared distinction
   (see [Types](../types.spec.md#aggregate-identities)).
-- Persisted projection fields MUST resolve to declared Types providing patterns
-  and inspectable storage contracts. Read endpoint and payload shapes MAY
-  continue to use patterns directly.
+- Persisted projection fields MUST accept any Uffda pattern satisfying
+  Coleslaw's data and purity constraints, just like aggregate fields. Storage
+  metadata MUST remain independent of validation pattern syntax (see
+  [Types](../types.spec.md#storage-metadata)).
 - A projection MAY select modeled error occurrences or summaries from its
   aggregates' machine states. Active and resolved occurrences follow the
   ordinary shape, version, and rebuild rules (see

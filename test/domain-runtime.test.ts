@@ -102,7 +102,7 @@ Deno.test(
 Deno.test(
   "req:application-shell-010 unknown names in domain and config pattern projections fail checking",
   async () => {
-    const path = "examples/domain/counter.clsw";
+    const path = "examples/domain/counter-runtime.clsw";
     const source = await Deno.readTextFile(path);
     const parsed = await parseApplicationSource(
       source.replace(
@@ -147,7 +147,7 @@ Deno.test(
 Deno.test(
   "req:application-shell-010 native expressions in grammar-extracted patterns are rejected",
   async () => {
-    const path = "examples/domain/counter.clsw";
+    const path = "examples/domain/counter-runtime.clsw";
     const parsed = await parseApplicationSource(
       await Deno.readTextFile(path),
       path,
@@ -190,7 +190,7 @@ Deno.test(
 Deno.test(
   "req:application-shell-010 invalid pattern references and non-data types fail checking",
   async () => {
-    const path = "examples/domain/counter.clsw";
+    const path = "examples/domain/counter-runtime.clsw";
     const source = await Deno.readTextFile(path);
     const unbound = await parseApplicationSource(
       source.replace('mode: ("api");', "mode: ($missing);"),
@@ -221,7 +221,9 @@ Deno.test(
 Deno.test(
   "req:application-shell-010 check and run reject unsafe expressions before startup",
   async () => {
-    const source = await Deno.readTextFile("examples/domain/counter.clsw");
+    const source = await Deno.readTextFile(
+      "examples/domain/counter-runtime.clsw",
+    );
     const invalidSource = source.replace(
       "(add state.fields.count input.by)",
       "(Deno.env)",

@@ -18,10 +18,11 @@ inputs and outputs, the config, a job's arguments, a message body, and a route's
 parameters.
 
 - A shape MUST be a Uffda pattern, written in Uffda's pattern syntax.
-- A named [Type](./types.spec.md) MUST provide the pattern and inspectable
-  storage contract of a persisted field, and MAY also provide construction.
-  Patterns remain available directly for payloads and other validation shapes;
-  storage metadata MUST NOT be inferred from their patterns.
+- A named [Type](./types.spec.md) MUST provide a pattern and MAY also provide
+  inspectable storage metadata and explicit construction. Any Uffda pattern
+  satisfying Coleslaw's constraints MUST remain usable directly, including for
+  persisted fields; a named Type MUST NOT be required. Storage metadata MUST NOT
+  be inferred from arbitrary patterns.
 - A shape MUST be matched against exactly one value, the way Uffda matches a
   scalar input, and MUST consume that value. A pattern that can only succeed by
   consuming more or less than one value never matches.

@@ -92,7 +92,9 @@ context LocalContext {
 Deno.test(
   "req:application-shell-011 explicit context bindings support aliases without changing aggregate identity",
   async () => {
-    const source = await Deno.readTextFile("examples/domain/counter.clsw");
+    const source = await Deno.readTextFile(
+      "examples/domain/counter-runtime.clsw",
+    );
     const aliases = source
       .replace(
         "manager: CounterManager(counter);",
@@ -162,7 +164,9 @@ Deno.test(
 Deno.test(
   "req:application-shell-011 invalid or ambient context dependencies fail without storage access",
   async () => {
-    const source = await Deno.readTextFile("examples/domain/counter.clsw");
+    const source = await Deno.readTextFile(
+      "examples/domain/counter-runtime.clsw",
+    );
     const candidates = [
       {
         source: source.replace(
@@ -260,7 +264,7 @@ Deno.test(
 Deno.test(
   "req:application-shell-010 declarative command runs through a loopback HTTP listener",
   async () => {
-    const path = "examples/domain/counter.clsw";
+    const path = "examples/domain/counter-runtime.clsw";
     const parsed = await parseApplicationSource(
       await Deno.readTextFile(path),
       path,
@@ -437,7 +441,9 @@ Deno.test(
 Deno.test(
   "req:application-shell-010 ordered controllers aggregate methods and skip path-shape mismatches",
   async () => {
-    const source = await Deno.readTextFile("examples/domain/counter.clsw");
+    const source = await Deno.readTextFile(
+      "examples/domain/counter-runtime.clsw",
+    );
     const routedSource = source
       .replace(
         "export http: CounterController(manager);",
@@ -540,7 +546,9 @@ export config CounterSettings`,
 Deno.test(
   "req:application-shell-010 omitted access and public principal use fail checking",
   async () => {
-    const source = await Deno.readTextFile("examples/domain/counter.clsw");
+    const source = await Deno.readTextFile(
+      "examples/domain/counter-runtime.clsw",
+    );
     const omittedPublic = await parseApplicationSource(
       source.replace('"/counters/{id}" public', '"/counters/{id}"'),
       "omitted-public.clsw",
@@ -778,7 +786,7 @@ controller OtherController(otherManager: OtherManager) {
 Deno.test(
   "req:application-shell-009 production Uffda shapes reject undeclared input keys",
   async () => {
-    const path = "examples/domain/counter.clsw";
+    const path = "examples/domain/counter-runtime.clsw";
     const parsed = await parseApplicationSource(
       await Deno.readTextFile(path),
       path,

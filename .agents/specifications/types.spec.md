@@ -2,9 +2,9 @@
 
 This chapter defines named Types: pattern-backed value contracts with explicit
 construction and inspectable storage metadata. It also defines how persisted
-fields and aggregate identities use them. Direct patterns remain available for
-payloads and other validation shapes; a Type does not replace
-[shapes](./patterns-as-types.spec.md#shapes).
+fields and aggregate identities use them. Any Uffda pattern remains available
+for fields, identities, payloads, and other validation shapes; a Type does not
+replace [shapes](./patterns-as-types.spec.md#shapes).
 
 ## Conventions
 
@@ -35,12 +35,13 @@ type Integer {
   grammar package; this does not load that package as arbitrary host code.
 - Declaring a Type MUST NOT execute its pattern or constructor, allocate an
   identity, or access storage.
-- Persisted fields, including aggregate identities, MUST resolve to a declared
-  Type with a pattern and an inspectable storage contract. A bare pattern or
-  named shape alone MUST NOT satisfy a persisted field declaration.
-- Relationship identity Types MUST be derived from the target aggregate.
-  Persisted projection fields MUST likewise resolve to Types, retaining nominal
-  identity distinctions where declared.
+- Fields, including aggregate identities and persisted projection fields, MUST
+  accept any Uffda pattern satisfying Coleslaw's data and purity constraints. A
+  named Type MUST NOT be required for validation. Storage requirements are
+  independent of pattern syntax and follow the storage metadata rules below.
+- Relationship identity contracts MUST be derived from the target aggregate.
+  Persisted projection fields MUST retain nominal identity distinctions where
+  declared.
 - Command and event payloads, route inputs, and other validation shapes MAY use
   patterns directly. Parentheses are not what makes a pattern a pattern.
 
@@ -55,6 +56,30 @@ type Integer {
 - Applications MAY declare custom Types for narrower validation or different
   storage representations. Built-in and custom Types MUST follow the same
   validation and storage rules.
+- The integer family MUST include `PositiveInteger`, `NonNegativeInteger`,
+  `NegativeInteger`, and `NonPositiveInteger`. These MUST respectively accept
+  Integer values greater than zero, greater than or equal to zero, less than
+  zero, and less than or equal to zero. They MUST retain Integer's canonical
+  representation, range limits, and storage contract.
+- `NonNegativeInteger` and `0 | PositiveInteger` MUST accept the same values;
+  likewise `NonPositiveInteger` and `0 | NegativeInteger`. Applications MAY
+  choose either spelling.
+
+### Patterns in field declarations
+
+- A Type referenced in a pattern MUST match using that Type's value pattern,
+  without invoking its constructor or accessing storage.
+- Fields MUST support inline patterns, rule references, literals, unions,
+  intersections, and projections using ordinary Uffda pattern semantics. Common
+  named patterns and Types are conveniences, not a closed set of allowed field
+  contracts. For example, `field count: (0 | PositiveInteger) = 0;` and
+  `field count: NonNegativeInteger = 0;` express equivalent validation.
+- A pattern MUST NOT be rejected merely because it lacks a named Type or
+  embedded storage metadata. An adapter requiring an explicit storage descriptor
+  MUST diagnose a missing or unsupported descriptor before schema creation or
+  persistence, not impose a restricted pattern grammar.
+- Pattern composition MUST NOT implicitly inherit or invoke a constructor. Field
+  initialization, nullability, and aggregate identity rules remain unchanged.
 
 ## Validation and canonical values
 
@@ -119,23 +144,26 @@ does not assert that Uffda exports them from any particular package entry.
 - Field nullability and identity allocation MUST NOT be properties of the
   reusable `store` descriptor. Effective column metadata MUST incorporate those
   properties from the owning declaration.
+- Arbitrary patterns MUST NOT imply a storage descriptor. Storage metadata from
+  referenced Types MUST NOT be silently selected when composed patterns leave
+  the representation ambiguous or incompatible.
 
 ## Fields and nullability
 
 The field declaration forms include:
 
 ```text
-field Integer count;
-field Integer initialCount = 0;
-field nullable Integer previousCount;
+field count: Integer;
+field initialCount: Integer = 0;
+field nullable previousCount: Integer;
 ```
 
 - Nullability MUST be declared on the field, independently of its Type's storage
   representation. Ordinary value Types MUST have non-null canonical values;
   field-level `nullable` adds `null` to that field's contract.
 - A nullable field MUST accept `null` or a valid canonical value of its declared
-  Type. A non-nullable field MUST reject `null`, including when its underlying
-  pattern would otherwise accept it.
+  pattern. A non-nullable field MUST reject `null`, including when its
+  underlying pattern would otherwise accept it.
 - Nullable MUST NOT mean optional: a present `null` and an omitted creation
   value are distinct. These field rules do not change optional-key matching in
   command payload shapes.
@@ -152,8 +180,8 @@ field nullable Integer previousCount;
 The identity declaration forms include:
 
 ```text
-identity Integer id;
-identity auto Integer id;
+identity id: Integer;
+identity auto id: Integer;
 ```
 
 - An identity without `auto` MUST be supplied explicitly when addressing or
@@ -189,6 +217,9 @@ identity auto Integer id;
 
 ## Open questions
 
+- **Storage for direct patterns:** how fields using arbitrary patterns declare
+  adapter-required storage metadata, and how compatible metadata from referenced
+  Types composes. Pattern acceptance MUST NOT depend on resolving this syntax.
 - **Creation protocol:** syntax for supplying initial field values and
   requesting Type construction; idempotency, final identity binding in events,
   and outcomes for repository-assigned-at-insert creation.

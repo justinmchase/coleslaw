@@ -55,12 +55,12 @@ it demonstrates positional selection of exactly one job, not domain behavior.
 ## Settings and explicit composition
 
 The [Types specification](./.agents/specifications/types.spec.md) defines the
-next value/identity model: required Types for persisted fields, storage
-metadata, explicit creation, field nullability, and nominal relationship
+next value/identity model: arbitrary field patterns, optional named Types,
+storage metadata, explicit creation, field nullability, and nominal relationship
 identities. It is a design contract, not implemented syntax yet. The executable
-Counter example still uses the initial pattern-backed field grammar and identity
-initializer; it will be migrated with requirement-citing tests in the
-implementation slice.
+[runtime Counter example](./examples/domain/counter-runtime.clsw) still uses the
+initial pattern-backed field grammar and identity initializer; it will be
+migrated with requirement-citing tests in the implementation slice.
 
 ```text
 import "./host.ts" ExampleJob;
@@ -124,15 +124,26 @@ permission to execute arbitrary host code.
 
 ## Real domain example
 
-[counter.clsw](./examples/domain/counter.clsw) declares a context, aggregate,
-manager, and explicitly public controller. A controller translates a shaped
-request into one manager operation; the manager sends one aggregate command. The
-command emits events, which evolve fields before conditional atomic save.
-Patterns and expressions execute through Uffda with an explicit pure scope.
+[counter.clsw](./examples/domain/counter.clsw) shows the specified design:
+`identity id: UUID;`, `field count: NonNegativeInteger = 0;`, reusable `rule`
+patterns, command input/metadata blocks, and a named event projection with bare
+`emit Incremented;`. The identity is supplied, not initialized or changed by an
+event. `0 | PositiveInteger` is an equivalent field contract; the integer family
+also includes `NonPositiveInteger` and `NegativeInteger`. Fields accept any
+Uffda pattern within Coleslaw's data and purity constraints, not just those
+common names; persistence metadata remains a separate contract.
+
+That design syntax is **not yet executable**. The
+[runtime example](./examples/domain/counter-runtime.clsw) preserves the current
+runnable context, aggregate, manager, and explicitly public controller. A
+controller translates a shaped request into one manager operation; the manager
+sends one aggregate command. The command emits events, which evolve fields
+before conditional atomic save. Patterns and expressions execute through Uffda
+with an explicit pure scope.
 
 ```sh
-./cslw check examples/domain/counter.clsw
-./cslw run examples/domain/counter.clsw --mode api
+./cslw check examples/domain/counter-runtime.clsw
+./cslw run examples/domain/counter-runtime.clsw --mode api
 ```
 
 The development Web adapter listens on port 8080 by default:
@@ -159,8 +170,10 @@ declaration, not by alias, and never expose aggregate storage.
 The command/handler input-and-metadata blocks, reusable Uffda `rule` patterns,
 maybe-by-default member access, and command-derived event projections are
 specified but are not all implemented by this executable slice. In particular,
-the current command syntax and event declaration/runtime model remain the
-earlier form; do not infer those newer semantics from this example.
+the runtime example's command syntax and event declaration/runtime model remain
+the earlier form. The design example requires the common Type catalog and
+absence-propagating member access; the HTTP path currently supplies no command
+metadata, so `metadata.reason` illustrates access to absent optional metadata.
 
 ## Scope and verification
 

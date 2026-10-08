@@ -11,9 +11,13 @@ capitals.
 
 ## Fields
 
-- A field MUST have a name, unique within its aggregate, and a declared Type
-  providing its value pattern and inspectable storage contract. A bare pattern
-  or named shape alone MUST NOT be used as a persisted field Type.
+- A field MUST have a name, unique within its aggregate, and a Uffda pattern.
+  Any pattern satisfying Coleslaw's data and purity constraints MUST be
+  supported; named Types and common patterns are conveniences, not requirements
+  (see [Types](../types.spec.md#patterns-in-field-declarations)).
+- Storage metadata MUST remain independent of validation pattern syntax. An
+  adapter requiring explicit metadata MUST diagnose missing or unsupported
+  metadata before schema creation or persistence.
 - Nullability MUST belong to the field, not the Type's storage descriptor (see
   [Types](../types.spec.md#fields-and-nullability)).
 - An ordinary field's initial value MUST be explicitly supplied at creation or

@@ -45,4 +45,4 @@ jobs:
           deno fmt --check README.md docs/implementation-plan.md deno.jsonc cslw.ts src/*.ts test/*.ts test/fixtures/metadata/*.ts
           deno task test
           ./cslw check examples/shell/app.clsw
-          ./cslw check examples/domain/counter.clsw
+          ./cslw check examples/domain/counter-runtime.clsw
