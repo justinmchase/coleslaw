@@ -72,6 +72,11 @@ capitals.
   branches under [jobs](./jobs.spec.md#explicit-job-selection-mappings).
   Exactly one branch MUST match; no match or ambiguity MUST fail before
   construction. Only the selected job's graph MUST be reached.
+- Domain modes MUST be nested in their owning context and compose that
+  instance's bindings through `this`, under
+  [modes](./modes.spec.md#declaring-modes). The initial top-level mode and
+  qualified-context binding grammar is a legacy implementation subset, not the
+  context-instance design contract.
 
 ## Explicit composition
 

@@ -126,17 +126,26 @@ Selection arguments match the ordered parameter shapes before construction. The
 also defines explicit dispatch (not yet implemented):
 
 ```text
-export mode JobMode(name: String): Job {
-  jobs(name) {
-    "inc" -> CounterContext.increment;
-    "dec" -> CounterContext.decrement;
+export context CounterContext {
+  counter: Counter;
+  manager: CounterManager(counter);
+  export increment: IncrementJob(manager);
+  export decrement: DecrementJob(manager);
+
+  export mode JobMode(name: String): Job {
+    jobs(name) {
+      "inc" -> this.increment;
+      "dec" -> this.decrement;
+    }
   }
 }
 ```
 
-Targets are exported job bindings. Exactly one pattern must match; no match or
-overlapping matches fail before construction. Only the selected job's graph is
-reached. Qualified names preserve context visibility without ambient access.
+`this` is the running mode's owning context instance, not static context access.
+Jobs retain the dependencies explicitly bound in that instance. Exactly one
+pattern must match; no match or overlapping matches fail before construction.
+Only the selected job's graph is reached. Jobs do not gain ambient access to
+other context members.
 
 Parameters can also be explicitly injected into component factories. Shapes use
 ordinary named imports/exports, with unknown names and cycles rejected. Config
@@ -192,13 +201,16 @@ Invalid shapes, undeclared body keys/query parameters, malformed JSON, and
 unsupported media types are refused. Unknown routes return 404; an unsupported
 method on a matching path returns 405 with `Allow`. Stop with Ctrl+C.
 
-Contexts declare named bindings and ordered dependencies explicitly. For
-example, `counter: Counter;`, `manager: CounterManager(counter);`, and
+The runnable legacy example declares named bindings and ordered dependencies
+explicitly. For example, `counter: Counter;`,
+`manager: CounterManager(counter);`, and
 `export http: CounterController(manager);` compose the counter path without
 ambient same-context access. A mode reaches the controller as
-`CounterContext.http`. Aliases may configure the same declaration more than
-once; aggregate capabilities remain identified by context and aggregate
-declaration, not by alias, and never expose aggregate storage.
+`CounterContext.http` in the legacy implementation. The specified design nests
+the mode inside the context and uses `this.http`; this instance-bound
+composition is not implemented yet. Aliases may configure the same declaration
+more than once; aggregate capabilities remain identified by context and
+aggregate declaration, not by alias, and never expose aggregate storage.
 
 The command/handler input-and-metadata blocks, reusable Uffda `rule` patterns,
 maybe-by-default member access, and command-derived event projections are

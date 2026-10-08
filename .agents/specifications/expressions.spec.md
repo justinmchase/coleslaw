@@ -49,8 +49,12 @@ commands and enqueue messages; and managers and reactors call services.
   scope is known when a program is compiled, an unresolved name never reaches
   the runtime.
 - Uffda's reserved name `_`, the value a pattern matched, MAY be used in a
-  shape's projections. Uffda's reserved name `this`, the parser's match, MUST
-  NOT be used: it describes how a value was parsed, not the domain.
+  shape's projections. Uffda's parser-match `this` MUST NOT be exposed: it
+  describes how a value was parsed, not the domain.
+- In a context-owned mode's composition and entry-point selection, Coleslaw
+  `this` MUST refer to the bound context instance under
+  [modes](./modes.spec.md#declaring-modes). This capability binding MUST NOT
+  expose parser internals or become domain data usable in payload projections.
 
 ## Core functions
 

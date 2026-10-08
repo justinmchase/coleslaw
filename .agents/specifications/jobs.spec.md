@@ -83,7 +83,7 @@ the rest of the config, and are parsed the same way.
   process as an unknown flag does.
 - In an implicit name-selected job list, a job's name MUST identify one job
   unambiguously. Name collisions MUST be diagnosed. Explicit mappings MAY
-  distinguish jobs through qualified exported bindings instead of declaration
+  distinguish jobs through their owning context's instance bindings instead of declaration
   names; their argument paths MUST remain unambiguous.
 
 ### Explicit job selection mappings
@@ -94,12 +94,12 @@ export context CounterContext {
     manager: CounterManager(counter);
     export increment: IncrementJob(manager);
     export decrement: DecrementJob(manager);
-}
 
-export mode JobMode(name: String): Job {
-    jobs(name) {
-        "inc" -> CounterContext.increment;
-        "dec" -> CounterContext.decrement;
+    export mode JobMode(name: String): Job {
+        jobs(name) {
+            "inc" -> this.increment;
+            "dec" -> this.decrement;
+        }
     }
 }
 ```
@@ -117,11 +117,14 @@ export mode JobMode(name: String): Job {
   they target the same job. Both failures MUST occur before construction.
 - A one-branch mapping MUST still match its pattern; it MUST NOT implicitly
   select that job on an unmatched or absent selector.
-- Targets MUST resolve statically to job bindings under ordinary visibility
-  rules. Context jobs MUST be explicitly exported; references such as
-  `CounterContext.increment` MUST retain their context ownership and dependency
-  restrictions. Bare names MUST resolve through an explicitly established
-  lexical binding, not ambient context membership.
+- Targets MUST be checked against job bindings in the mode's owning context.
+  `this.increment` MUST select the binding on the context instance bound to the
+  running mode, not a static member of a context declaration. Selecting it MUST
+  retain the job's explicitly supplied manager dependencies and their context
+  identity. A job MUST NOT infer its context from its declaration name.
+- Modes MUST NOT select jobs through static context-name member access.
+  Context membership MUST NOT grant the selected job ambient access to other
+  context bindings; its own explicit dependency parameters remain its boundary.
 - Unknown, inaccessible, or non-job targets MUST be compile errors, including
   in branches not selected for a particular run. A mode MUST NOT combine an
   explicit mapping with a competing implicit job list.

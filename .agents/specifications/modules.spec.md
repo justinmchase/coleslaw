@@ -66,6 +66,9 @@ aggregates.
   before or after the context body.
 - A context MAY bind the same declaration more than once under distinct aliases;
   each alias is a separate configured composition instance.
+- A context MAY declare modes within its body. Each such mode MUST belong to
+  that context and use `this` to reach its running context instance's bindings
+  under [modes](./modes.spec.md#declaring-modes).
 - A member MUST be an aggregate, a projection, a manager, a reactor, a
   controller, a consumer, a queue, or a job. These are owned: each MUST be a
   member of at most one context in a program. Multiple aliases in the same
@@ -83,7 +86,8 @@ aggregates.
   `export listing: ProductListing();`, and an event is exported by its aggregate
   and name, such as `export Product.ProductDiscontinued;`.
 - A context MAY export events, projections, shapes, and funcs, which other
-  contexts use, and controllers, consumers, jobs, and reactors, which modes run.
+  contexts use, and controllers, consumers, jobs, and reactors. It MAY export
+  its nested modes for program selection.
 - An exported projection MUST expose reads only through its declared
   [read endpoints](./queries.spec.md#declared-access), not unrestricted access
   to its stored values. Endpoints belong to the projection, not to a separate
@@ -111,8 +115,10 @@ aggregates.
   exports it, such as `Catalog.ProductDiscontinued` after importing `Catalog`.
   Using it any other way, such as by importing it from the module that declares
   it, MUST be a compile error naming both contexts and the declaration.
-- A mode MUST reach the entry points and reactors of a context through an
-  exported context binding, such as `Catalog.api`.
+- A context-owned mode MUST reach its entry points and reactors through bindings
+  on its owning context instance, such as `this.api`, not static access such as
+  `Catalog.api`. This composition access MUST NOT grant its entry points ambient
+  access to aggregates or managers.
 - Owned declarations that are a member of no context belong to the program's
   default context, which has no name and exports nothing to other contexts. A
   program that declares no contexts is entirely in its default context, so a

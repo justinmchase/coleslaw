@@ -7,6 +7,12 @@ export context CounterContext {
   counter: Counter;
   manager: CounterManager(counter);
   export http: CounterController(manager);
+
+  export mode CounterApi: Web {
+    controllers {
+      this.http http;
+    }
+  }
 }
 
 aggregate Counter {
@@ -64,12 +70,7 @@ export config CounterSettings {
   mode: "api";
 }
 
-export mode CounterApi: Web {
-  controllers {
-    CounterContext.http http;
-  }
-}
-
+# Program references to exported nested modes remain a specification open question.
 export program CounterApplication {
   config CounterSettings settings;
   mode settings.mode {

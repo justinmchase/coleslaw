@@ -22,6 +22,17 @@ process that runs it. Each process runs exactly one mode.
   declare two Web modes, a public one and an administrative one, each with its
   own controllers, so they deploy and scale separately.
 - A program MAY declare more than one mode of the same kind.
+- A domain mode MUST be declared inside its owning context. A running mode MUST
+  be bound to an instance of that context; `this` in the mode's composition and
+  entry-point selection MUST refer to that instance, not a static context
+  declaration or Uffda parser match.
+- Mode references select declarations; they MUST NOT provide static access to
+  a context's job, controller, or other component bindings. Binding the owning
+  context MUST NOT eagerly construct all its members.
+- A mode MAY compose its owning context's entry points through `this` without
+  exporting those entry points for outside access. Entry points themselves MUST
+  retain their explicit dependency boundaries; mode ownership MUST NOT grant
+  jobs or controllers ambient context access.
 - An entry point MAY appear in more than one mode.
 - Without a program selection mapping, exactly one mode MUST be declared the
   default. A program selection mapping MUST instead obtain any default label
@@ -110,6 +121,10 @@ Coleslaw defines four kinds of mode. Each runs one kind of entry point.
 
 ## Open questions
 
+- **Context-owned mode selection.** The exact program-reference and import
+  syntax for exported nested modes, and resolving modes with colliding names
+  in different contexts. References MUST preserve ownership and instance
+  binding; ambiguous references MUST NOT be guessed.
 - **Running elsewhere.** How the modes of one program are deployed to different
   infrastructure, such as one container image with a mode per deployment.
 - **The stopping bound.** How long a mode may take to finish its work when
