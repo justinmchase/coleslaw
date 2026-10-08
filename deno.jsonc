@@ -1,5 +1,5 @@
 {
-  // Target Uffda 0.9.1; its Coleslaw API is not published yet, so development uses the sibling-checkout bridge.
+  // Requires the public Uffda 0.9.1 integration APIs from JSR.
   "imports": {
     "@justinmchase/uffda": "jsr:@justinmchase/uffda@^0.9.1",
     "@justinmchase/uffda/grammar": "jsr:@justinmchase/uffda@^0.9.1/grammar",
@@ -14,8 +14,9 @@
     "@std/path": "jsr:@std/path@^1.0.8"
   },
   "tasks": {
-    "check": "deno check --config deno.dev.jsonc cslw.ts src/*.ts",
-    "test": "COLESLAW_UFFDA_ROOT=../uffda deno test --config deno.dev.jsonc --allow-read --allow-write=bin,clsw.lock --allow-env=COLESLAW_UFFDA_ROOT,MODE,JOB_NAME,TOKEN --allow-net=127.0.0.1 test/",
-    "cli": "COLESLAW_UFFDA_ROOT=../uffda deno run --config deno.dev.jsonc --allow-read --allow-write --allow-env --allow-net cslw.ts"
+    "check": "deno check cslw.ts src/*.ts",
+    "grammar": "uffda compile --config clsw.jsonc 'src/grammar/*.uff'",
+    "test": "deno test --allow-read --allow-write=bin,clsw.lock --allow-env=MODE,JOB_NAME,TOKEN --allow-net=127.0.0.1,jsr.io test/",
+    "cli": "deno run --allow-read --allow-write --allow-env --allow-net cslw.ts"
   }
 }

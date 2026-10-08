@@ -136,10 +136,10 @@ Define and implement the smallest upstream prerequisites needed to:
 - load validated local TypeScript descriptors without treating arbitrary
   Coleslaw nodes as Uffda runtime declarations.
 
-Test these APIs upstream and use an explicit local-development mapping while
-unpublished. Switch to a published JSR version before presenting the Coleslaw
-deliverable as independently installable. Preserve the restriction against
-loading host code from grammar packages unless deliberately revised upstream.
+Test these APIs upstream, then consume only released CLI and JSR versions. Do
+not substitute an Uffda repository checkout for an unpublished dependency.
+Preserve the restriction against loading host code from grammar packages unless
+deliberately revised upstream.
 
 ### 2. Specify the application shell and composition
 
@@ -249,27 +249,32 @@ The approved plan was merged in #16. Implementation continues in #17.
   [justinmchase/uffda#270](https://github.com/justinmchase/uffda/pull/270). Its
   current integration commit is `503ee800e610862d390fd1caaf85f7533214b780`,
   including the public expression evaluator and runtime exports. Focused
-  upstream validation and CI passed. It is not merged or published. Development
-  and CI must use an explicit mapping to this checkout until a compatible JSR
-  release exists.
+  upstream validation and CI passed. The APIs are now published in Uffda 0.9.1.
+  Local development and CI use the released CLI and JSR dependencies, without a
+  sibling-checkout mapping or source build.
 - The application-shell specification and requirements are committed, including
   Web naming, settings selection, explicit composition, and host boundaries.
 - The initial pure aggregate kernel has 17 passing requirement-citing tests.
   These verify event-driven evolution, ordered transitions, atomic memory saves,
   bounded conflict retries, immutable identity, and uncertain-save warnings.
-- Grammar, CLI, composition, and both runnable examples are implemented. The
-  current suite has 51 passing tests, with type checking, lint, formatting, and
-  the specification audit passing. A checked Counter artifact was started and
-  verified over HTTP: two increments yielded counts 2 and 5 with versions 1 and
-  2; the smoke-test process was stopped afterwards.
+- Grammar, CLI, composition, and both runnable examples are implemented. Before
+  removing the source bridge, 56 local-development tests passed. With published
+  Uffda 0.9.1 only, 34 pass and 22 fail on the
+  [JSR built-in grammar defect](https://github.com/justinmchase/uffda/issues/271).
+  Released-CLI grammar compilation, type checking, lint, formatting, and the
+  specification audit pass. The affected tests are not skipped. A checked
+  Counter artifact was started and verified over HTTP: two increments yielded
+  counts 2 and 5 with versions 1 and 2; the smoke-test process was stopped
+  afterwards.
 - Follow-up validation fixed controller-wide routing and `Allow`, shaped path
   routing, explicit imported config binding, private import scoping, genuine
   stale-input detection, custom project output directories, launcher working
   directories, and secret redaction during mode execution.
-- Named reusable shapes and arbitrary shaped mode parameters remain contract
-  gaps under active implementation. General service declarations remain outside
-  the current executable subset. Do not present the entire six-stage plan as
-  complete while these surfaces are missing.
+- Named reusable shapes and shaped mode parameters are implemented, including
+  imported shape scope, cycle detection, argument arity, shaped values, and
+  parameter injection before factories run. General service declarations remain
+  outside the current executable subset. Do not present the entire six-stage
+  plan as complete while those declarations are missing.
 
 The memory store is a development adapter, not durable production storage or
 event delivery. Modeled errors, attached messages, projections, and production

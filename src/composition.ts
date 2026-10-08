@@ -54,6 +54,7 @@ export interface HostModeDescriptor {
 export type CompositionArgument =
   | { readonly kind: "literal"; readonly value: unknown }
   | { readonly kind: "binding"; readonly name: string }
+  | { readonly kind: "parameter"; readonly name: string }
   | { readonly kind: "setting"; readonly path: readonly string[] };
 
 export interface ComponentBinding {
@@ -374,8 +375,14 @@ export function checkComposition(
             } has an incompatible literal`,
           });
         }
-      } else {
+      } else if (argument.kind === "setting") {
         refs.push(`$setting:${argument.path.join(".")}`);
+      } else if (expected.kind === "component") {
+        problems.push({
+          code: "INVALID_ARGUMENT_TYPE",
+          message:
+            `${binding.name} cannot receive a component through mode parameter ${argument.name}`,
+        });
       }
     }
     dependencies.set(binding.name, refs);
@@ -446,6 +453,7 @@ export function checkComposition(
 
 export interface CompositionRunOptions {
   readonly settingValue: (path: readonly string[]) => unknown;
+  readonly parameterValues?: ReadonlyMap<string, unknown>;
 }
 
 export interface StartedComposition {
@@ -506,8 +514,23 @@ export async function startComposition(
             return resources.get(argument.name)?.value;
           case "setting":
             return options.settingValue(argument.path);
+          case "parameter":
+            if (!options.parameterValues?.has(argument.name)) {
+              throw new Error(`Missing mode parameter ${argument.name}`);
+            }
+            return options.parameterValues.get(argument.name);
         }
       });
+      for (let index = 0; index < values.length; index++) {
+        const type = binding.descriptor.parameters[index].type;
+        if (type.kind !== "component" && !valueMatches(values[index], type)) {
+          throw new Error(
+            `Component ${binding.name} argument ${
+              binding.descriptor.parameters[index].name
+            } has an incompatible value`,
+          );
+        }
+      }
       const resource = await binding.descriptor.create(values);
       resources.set(binding.name, resource);
       constructed.push(resource);

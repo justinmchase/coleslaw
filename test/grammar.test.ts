@@ -1,5 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
+import { PatternKind } from "@justinmchase/uffda/pattern";
 import { parseApplicationSource } from "../src/uffda.ts";
+import { expandShapeReferences } from "../src/shapes.ts";
 
 const source = `export config Settings {
   mode: ("api" | "job");
@@ -18,6 +20,94 @@ export program Shop {
   }
 }
 `;
+
+Deno.test(
+  "req:application-shell-001 parses reusable shapes and typed mode parameters",
+  async () => {
+    const result = await parseApplicationSource(
+      `export shape JobName = (string);
+export config Settings { mode: ("job"); name: (JobName); }
+export mode Batch(jobName: (JobName)): Job {
+  jobs { Host.Import(jobName) import; }
+}
+export program Application {
+  config Settings settings;
+  mode settings.mode { "job" => Batch(settings.name); }
+}`,
+      "shapes.clsw",
+    );
+    assert(result.ok, result.ok ? "" : result.failure.message);
+    const shape = result.syntax.declarations.find((declaration) =>
+      declaration.kind === "shape"
+    );
+    assert(shape?.kind === "shape");
+    assertEquals(shape.name, "JobName");
+    assert(shape.span.start.offset > 0);
+    const mode = result.syntax.declarations.find((declaration) =>
+      declaration.kind === "mode"
+    );
+    assert(mode?.kind === "mode");
+    assertEquals(mode.parameters.map((parameter) => parameter.name), [
+      "jobName",
+    ]);
+    assert(mode.parameters[0].span.start.offset > 0);
+    assertEquals(mode.parameters[0].pattern.kind, "resolve");
+    const expanded = expandShapeReferences(
+      mode.parameters[0].pattern,
+      new Map([[
+        "JobName",
+        { name: "JobName", pattern: shape.pattern },
+      ]]),
+    );
+    assert(expanded.ok, expanded.ok ? "" : expanded.message);
+    if (expanded.ok) assertEquals(expanded.pattern.kind, PatternKind.Type);
+    assertEquals(
+      result.syntax.declarations.filter((declaration) =>
+        declaration.kind === "export"
+      ).map((declaration) => declaration.name),
+      ["JobName", "Settings", "Batch", "Application"],
+    );
+  },
+);
+
+Deno.test(
+  "req:application-shell-001 named shapes diagnose unknown names and cycles",
+  async () => {
+    const result = await parseApplicationSource(
+      `shape First = (Second);
+shape Second = (First);
+export config Settings { mode: (Missing); }`,
+      "bad-shapes.clsw",
+    );
+    assert(result.ok, result.ok ? "" : result.failure.message);
+    const config = result.syntax.declarations.find((declaration) =>
+      declaration.kind === "config"
+    );
+    assert(config?.kind === "config");
+    const setting = config.settings[0];
+    assert(setting.kind === "setting");
+    const unknown = expandShapeReferences(setting.pattern, new Map());
+    assertEquals(unknown.ok, false);
+    if (!unknown.ok) {
+      assertEquals(unknown.message, "Unknown named shape Missing");
+    }
+    const first = result.syntax.declarations.find((declaration) =>
+      declaration.kind === "shape" && declaration.name === "First"
+    );
+    assert(first?.kind === "shape");
+    const shapes = new Map(
+      result.syntax.declarations.filter((declaration) =>
+        declaration.kind === "shape"
+      ).map((declaration) => [
+        declaration.name,
+        { name: declaration.name, pattern: declaration.pattern },
+      ]),
+    );
+    const cyclic = expandShapeReferences(first.pattern, shapes);
+    assertEquals(cyclic.ok, false);
+    if (!cyclic.ok) assertEquals(cyclic.message.includes("cycle"), true);
+  },
+);
 
 Deno.test(
   "req:application-shell-001 parses Uffda patterns into located typed declarations",

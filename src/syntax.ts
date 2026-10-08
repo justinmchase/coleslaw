@@ -58,6 +58,19 @@ export interface ConfigDeclaration {
   readonly span: SourceSpan;
 }
 
+export interface ShapeDeclaration {
+  readonly kind: "shape";
+  readonly name: string;
+  readonly pattern: UffdaPatternNode;
+  readonly span: SourceSpan;
+}
+
+export interface ModeParameter {
+  readonly name: string;
+  readonly pattern: UffdaPatternNode;
+  readonly span: SourceSpan;
+}
+
 export interface ComponentArgument {
   readonly kind:
     | "reference"
@@ -98,6 +111,7 @@ export interface CompositionSection {
 export interface ModeDeclaration {
   readonly kind: "mode";
   readonly name: string;
+  readonly parameters: readonly ModeParameter[];
   readonly modeKind: NamePath | "Web" | "Worker" | "Job" | "Events";
   readonly sections: readonly CompositionSection[];
   readonly span: SourceSpan;
@@ -133,6 +147,7 @@ export type SyntaxDeclaration =
   | ImportDeclaration
   | ExportDeclaration
   | ConfigDeclaration
+  | ShapeDeclaration
   | ModeDeclaration
   | ProgramDeclaration;
 
@@ -186,6 +201,19 @@ export interface RawConfigDeclaration {
   readonly span: SourceSpan;
 }
 
+export interface RawShapeDeclaration {
+  readonly kind: "shape";
+  readonly name: string;
+  readonly pattern: UffdaPatternNode;
+  readonly span: SourceSpan;
+}
+
+export interface RawModeParameter {
+  readonly name: string;
+  readonly pattern: UffdaPatternNode;
+  readonly span: SourceSpan;
+}
+
 export interface RawComponentBinding {
   readonly component: RawNamePath;
   readonly arguments: readonly UffdaExpressionNode[];
@@ -203,6 +231,7 @@ export interface RawCompositionSection {
 export interface RawModeDeclaration {
   readonly kind: "mode";
   readonly name: string;
+  readonly parameters: readonly RawModeParameter[];
   readonly modeKind: RawNamePath | "Web" | "Worker" | "Job" | "Events";
   readonly sections: readonly RawCompositionSection[];
   readonly span: SourceSpan;
@@ -354,6 +383,7 @@ export type RawSyntaxDeclaration =
   | RawImportDeclaration
   | RawExportDeclaration
   | RawConfigDeclaration
+  | RawShapeDeclaration
   | RawModeDeclaration
   | RawProgramDeclaration
   | RawContextDeclaration

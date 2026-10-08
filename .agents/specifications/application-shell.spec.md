@@ -42,6 +42,18 @@ capitals.
   defaults MUST NOT be accepted.
 - Mode arguments MUST be shaped declaration parameters. Mode binding MUST NOT
   be an arbitrary function invocation or evaluate effectful expressions.
+- Named shapes MUST be declared as `shape Name = (Pattern);`, where `Pattern`
+  uses Uffda's pattern syntax. Shape references MUST obey explicit imports and
+  exports and MUST NOT introduce effects or recursive unbounded resolution.
+  Config patterns MUST remain self-contained under
+  [config](./config.spec.md#the-config-declaration), rather than depend on
+  named declarations.
+- A mode MAY declare an ordered parameter list before its kind, such as
+  `mode Batch(jobName: (string)): Job`. A selection's arguments MUST match the
+  declared parameter shapes before any reached component is constructed.
+  Parameter names MUST be unique. Missing, extra, or invalid arguments MUST
+  fail startup. An existing Job selection with no explicit parameters MAY
+  retain its single job-name selection argument for compatibility.
 - A program MAY explicitly map positional arguments onto setting paths.
   Named flags MUST take precedence over positional arguments, which take
   precedence over environment input and pattern defaults. Extra positionals
@@ -122,10 +134,10 @@ capitals.
 
 ## Delivery scope
 
-- A development mapping MAY use the sibling Uffda checkout while public
-  integration APIs await release. It MUST be explicit, versioned/documented,
-  and verified by tests; the application MUST NOT claim standalone installation
-  from a JSR version lacking required APIs.
+- Local development and CI MUST use a released Uffda CLI and published JSR
+  integration APIs. They MUST NOT load or build an Uffda repository checkout
+  as a dependency. Missing released APIs MUST be reported as a dependency
+  blocker rather than substituted with repository source.
 - A shell demonstration MAY use a clearly labeled test mode adapter. It MUST
   NOT be presented as a complete domain runtime or production Web server.
 - Domain behavior SHOULD expand through complete, requirement-citing tested

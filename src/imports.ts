@@ -7,6 +7,10 @@ import {
   isHostModeDescriptor,
 } from "./composition.ts";
 import { parseApplicationSource } from "./uffda.ts";
+import {
+  expandShapeReferences,
+  shapeDefinitionsFromDeclarations,
+} from "./shapes.ts";
 import type {
   RawSyntaxDeclaration,
   RawSyntaxModule,
@@ -50,7 +54,7 @@ function localDeclarations(
       declaration.kind === "config" || declaration.kind === "mode" ||
       declaration.kind === "program" || declaration.kind === "context" ||
       declaration.kind === "aggregate" || declaration.kind === "manager" ||
-      declaration.kind === "controller"
+      declaration.kind === "controller" || declaration.kind === "shape"
     ) {
       declarations.set(declaration.name, declaration);
     }
@@ -236,7 +240,26 @@ export async function resolveApplicationImports(
       }
     }
 
-    for (const [name, value] of declarations) localExports.set(name, value);
+    const shapes = shapeDefinitionsFromDeclarations([
+      ...declarations.values(),
+      ...importedSymbols.values(),
+    ]);
+    for (const [name, value] of declarations) {
+      if (value.kind === "shape") {
+        const expanded = expandShapeReferences(value.pattern, shapes);
+        if (!expanded.ok) {
+          diagnostics.push({
+            code: "INVALID_NAMED_SHAPE",
+            message: expanded.message,
+            span: value.span,
+          });
+        } else {
+          localExports.set(name, { ...value, pattern: expanded.pattern });
+        }
+      } else {
+        localExports.set(name, value);
+      }
+    }
     const exported = new Map<string, unknown>();
     for (const name of rawExports(source)) {
       const value = localExports.get(name) ?? importedSymbols.get(name);
@@ -301,6 +324,7 @@ export async function resolveApplicationImports(
           "aggregate",
           "manager",
           "controller",
+          "shape",
         ]
           .includes(Reflect.get(value, "kind"))
       ) {

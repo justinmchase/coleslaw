@@ -241,6 +241,7 @@ function declarationName(
 ): string | undefined {
   switch (declaration.kind) {
     case "config":
+    case "shape":
     case "mode":
     case "program":
     case "context":
@@ -311,6 +312,9 @@ export function modeComposition(
           expression,
           configBinding,
           bindingNames,
+          new Set(
+            (declaration.parameters ?? []).map((parameter) => parameter.name),
+          ),
         );
         if (converted === undefined) {
           diagnostics.push({
@@ -351,6 +355,7 @@ export function compositionArgument(
   expression: UffdaExpressionNode,
   configBinding: string,
   bindingNames: ReadonlySet<string>,
+  parameterNames: ReadonlySet<string> = new Set(),
 ): CompositionArgument | undefined {
   const path = expressionPath(expression);
   if (path !== undefined) {
@@ -359,6 +364,9 @@ export function compositionArgument(
     }
     if (path.length === 1 && bindingNames.has(path[0])) {
       return { kind: "binding", name: path[0] };
+    }
+    if (path.length === 1 && parameterNames.has(path[0])) {
+      return { kind: "parameter", name: path[0] };
     }
     return undefined;
   }
@@ -584,7 +592,9 @@ export function checkApplication(
           span: selection.mode.span,
         });
       }
-      const selectedMode = modesByName.get(modeName);
+      const importedMode = environment.importedDeclarations?.get(modeName);
+      const selectedMode = modesByName.get(modeName) ??
+        (importedMode?.kind === "mode" ? importedMode : undefined);
       const selectedKind = selectedMode
         ? modeKindName(selectedMode)
         : undefined;
@@ -593,9 +603,21 @@ export function checkApplication(
           ? BUILTIN_MODES[selectedKind]
           : environment.modeDescriptors?.get(selectedKind)
         : undefined;
+      const parameters = selectedMode?.parameters ?? [];
       if (
+        parameters.length > 0 &&
+        parameters.length !== selection.arguments.length
+      ) {
+        diagnostics.push({
+          code: "INVALID_MODE_ARGUMENT_COUNT",
+          message:
+            `Mode ${modeName} expects ${parameters.length} arguments but received ${selection.arguments.length}`,
+          span: selection.span,
+        });
+      } else if (
         selection.arguments.length > 0 &&
-        modeDescriptor?.entryPoint !== "job"
+        parameters.length === 0 &&
+        (modeDescriptor?.entryPoint !== "job" || selection.arguments.length > 1)
       ) {
         diagnostics.push({
           code: "UNSUPPORTED_MODE_ARGUMENTS",
@@ -609,6 +631,25 @@ export function checkApplication(
   }
 
   for (const mode of modes) {
+    const parameterNames = (mode.parameters ?? []).map((parameter) =>
+      parameter.name
+    );
+    if (
+      new Set(parameterNames).size !== parameterNames.length ||
+      parameterNames.some((name) =>
+        name === program?.configBinding ||
+        mode.sections.some((section) =>
+          section.bindings.some((binding) => binding.name === name)
+        )
+      )
+    ) {
+      diagnostics.push({
+        code: "DUPLICATE_MODE_PARAMETER",
+        message:
+          `Mode ${mode.name} parameter names must be unique and cannot shadow config or component bindings`,
+        span: mode.span,
+      });
+    }
     const kindName = modeKindName(mode);
     const descriptor = kindName in BUILTIN_MODES
       ? BUILTIN_MODES[kindName]

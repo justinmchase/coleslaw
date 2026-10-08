@@ -6,27 +6,24 @@ reuses Uffda's tokenizer, patterns, expressions, and import syntax. TypeScript
 supplies semantic checking, explicit composition, runtime adapters, and the
 `cslw` CLI; domain decisions remain declarative Coleslaw.
 
-## Development prerequisite
+## Development prerequisites
 
-This implementation requires the public integration APIs in
-[justinmchase/uffda#270](https://github.com/justinmchase/uffda/pull/270). The
-target Uffda version is **0.9.1**, which is not published yet. This is a
-source-run development setup, not an independently installable JSR release.
+Use Deno 2 and the released
+[Uffda CLI](https://github.com/justinmchase/uffda/releases/latest), version
+0.9.1 or later, installed on `PATH`. Coleslaw imports the public Uffda 0.9.1
+APIs and grammar components from JSR. Both local development and
+[CI](./.github/workflows/checks.yml) use released dependencies only; neither
+loads or builds a sibling Uffda checkout.
 
-Use Deno 2 and a sibling `../uffda` checkout at commit
-`503ee800e610862d390fd1caaf85f7533214b780`. In a fresh Uffda checkout, build its
-grammar artifacts using `deno task compile:lang` with the Uffda CLI installed.
-That task replaces Uffda's `bin` artifacts; do not run it over artifacts you
-need to preserve. The pinned setup is also exercised by
-[CI](./.github/workflows/checks.yml).
-
-[deno.dev.jsonc](./deno.dev.jsonc) maps supported Uffda TypeScript entry points
-to the sibling checkout. `COLESLAW_UFFDA_ROOT` explicitly maps grammar-package
-resolution to its compiled artifacts. The development CLI launcher configures
-both; no private copied parser or silently substituted published API is used.
+Uffda 0.9.1 currently has a
+[published-package loading defect](https://github.com/justinmchase/uffda/issues/271):
+type checking and CLI grammar compilation work, but runtime grammar resolution
+fails when its built-in artifacts are loaded from JSR. The affected tests remain
+enabled; no local-source fallback is provided.
 
 ```sh
-uffda compile --config clsw.jsonc 'src/grammar/*.uff'
+uffda --version
+deno task grammar
 deno task check
 deno task test
 ./cslw --help
@@ -94,6 +91,23 @@ redacted diagnostics. Precedence is named flags, positional bindings,
 environment input, then pattern defaults. Resolve selector settings first;
 credentials needed only by unselected modes are not required.
 
+Reusable shapes and explicitly shaped mode parameters are supported:
+
+```text
+export shape JobName = (string);
+export mode Batch(jobName: (JobName)): Job {
+  jobs {
+    ExampleJob example;
+  }
+}
+```
+
+Selection arguments match the ordered parameter shapes before construction.
+Parameters can also be explicitly injected into component factories. Shapes use
+ordinary named imports/exports, with unknown names and cycles rejected. Config
+patterns stay self-contained, as required by the config contract; config cannot
+depend on other program declarations, including named shapes.
+
 Modes select resolvable kind descriptors: Web, Worker, Job, Events, or an
 explicitly imported custom kind. Services, repositories, managers, and entry
 points are explicitly composed. Only reached dependencies are constructed,
@@ -140,11 +154,10 @@ authorize cross-context access or direct storage reads.
 
 This is an initial executable slice, not the entire specified language.
 Unsupported declarations fail explicitly rather than accepting opaque bodies.
-General service declarations, named reusable shapes, arbitrary shaped mode
-parameters, authentication/middleware, projections, queues, modeled errors,
-attached messages, production delivery/storage, and formatting remain future
-slices. Worker/Events infrastructure does not imply implemented domain
-consumer/reactor grammar.
+General service declarations, authentication/middleware, projections, queues,
+modeled errors, attached messages, production delivery/storage, and formatting
+remain future slices. Worker/Events infrastructure does not imply implemented
+domain consumer/reactor grammar.
 
 The counter uses **process-local, non-durable memory storage**. State and
 pending events are recorded together, but pending events are not delivered.

@@ -15,6 +15,10 @@ Preconditions:
 Expected behavior:
 
 - A matching label MUST select its declared mode and shaped arguments.
+- Explicit mode parameters MUST have unique names; argument count and shapes
+  MUST be checked before construction. Missing, extra, or shape-invalid
+  arguments MUST fail. Parameter references MUST resolve only within their
+  declared mode.
 - A default selector value MUST select only one mode.
 - Duplicate labels, unknown labels, unknown named arguments, and extra
   positionals MUST be diagnosed before startup construction.

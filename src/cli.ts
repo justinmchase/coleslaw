@@ -23,6 +23,7 @@ import { resolveApplicationImports } from "./imports.ts";
 import { selectExactlyOneJob, selectMode } from "./selection.ts";
 import {
   createDeclarativeHostComponents,
+  createDomainExpressionRuntime,
   validateDeclarativeDomain,
 } from "./domain-runtime.ts";
 import type {
@@ -33,6 +34,7 @@ import type {
   UffdaExpressionNode,
 } from "./syntax.ts";
 import { parseApplicationSource, UFFDA_API_VERSION } from "./uffda.ts";
+import { shapeDefinitionsFromDeclarations } from "./shapes.ts";
 import {
   checkedArtifactPath,
   type ColeslawProject,
@@ -164,23 +166,25 @@ async function loadValidated(
     });
     return undefined;
   }
-  const domainDiagnostics = validateDeclarativeDomain(parsed.syntax);
+  const imports = await resolveApplicationImports(parsed.syntax, file.path);
+  if (!imports.ok) {
+    for (const diagnostic of imports.diagnostics) printDiagnostic(diagnostic);
+    return undefined;
+  }
+  const shapes = shapeDefinitionsFromDeclarations([
+    ...parsed.syntax.declarations,
+    ...imports.resolved.declarations.values(),
+  ]);
+  const domainDiagnostics = validateDeclarativeDomain(parsed.syntax, shapes);
   if (domainDiagnostics.length > 0) {
     for (const diagnostic of domainDiagnostics) {
       printDiagnostic(diagnostic);
     }
     return undefined;
   }
-  const imports = await resolveApplicationImports(parsed.syntax, file.path);
-  if (!imports.ok) {
-    for (const diagnostic of imports.diagnostics) {
-      printDiagnostic(diagnostic);
-    }
-    return undefined;
-  }
   const componentDescriptors = new Map([
     ...imports.resolved.componentDescriptors,
-    ...createDeclarativeHostComponents(parsed.syntax),
+    ...createDeclarativeHostComponents(parsed.syntax, { shapes }),
   ]);
   const checked = checkApplication(parsed.syntax, {
     importedNames: imports.resolved.names,
@@ -505,6 +509,35 @@ async function runApplication(
     }
   }
 
+  const parameters = declaration.parameters ?? [];
+  const parameterValues = new Map<string, unknown>();
+  const shapes = shapeDefinitionsFromDeclarations([
+    ...application.syntax.declarations,
+    ...application.imports.declarations.values(),
+  ]);
+  const patternRuntime = createDomainExpressionRuntime(shapes);
+  if (parameters.length > 0) {
+    if (parameters.length !== extraArguments.length) {
+      throw new Error(
+        `Mode ${declaration.name} expects ${parameters.length} arguments`,
+      );
+    }
+    for (let index = 0; index < parameters.length; index++) {
+      const matched = await patternRuntime.match(
+        parameters[index].pattern,
+        extraArguments[index],
+      );
+      if (!matched.matched) {
+        throw new Error(
+          `Mode ${declaration.name} parameter ${
+            parameters[index].name
+          } does not match its shape`,
+        );
+      }
+      extraArguments[index] = matched.value;
+      parameterValues.set(parameters[index].name, matched.value);
+    }
+  }
   let modeToRun = declaration;
   let invocationArguments: readonly unknown[] = [];
   if (descriptor.entryPoint === "job") {
@@ -581,6 +614,7 @@ async function runApplication(
   }
   const started = await startComposition(checked.checked, {
     settingValue: (path) => getValue(resolved.values, path),
+    parameterValues,
   });
   const secretValues = flattenSettings(application.config.settings)
     .filter((setting) => setting.secret)

@@ -5,7 +5,9 @@ export config ShellSettings {
   jobName: (string);
 }
 
-export mode BatchJob: Job {
+export shape JobName = (string);
+
+export mode BatchJob(jobName: (JobName)): Job {
   jobs {
     ExampleJob example;
   }

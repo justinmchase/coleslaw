@@ -65,6 +65,23 @@ rule ConfigDeclaration =
   -> { kind: "config", name: n, settings: m }
 ;
 
+rule ShapeDeclaration =
+  "shape"
+  n:Identifier
+  "="
+  "("
+  p:Pattern
+  ")"
+  ";"
+  -> { kind: "shape", name: n, pattern: p }
+;
+
+rule ExportedShape =
+  "export"
+  d:ShapeDeclaration
+  -> (pack { kind: "export", name: d.name } d)
+;
+
 rule ExportedConfig =
   "export"
   d:ConfigDeclaration
@@ -82,9 +99,15 @@ rule ModeKind =
 rule ComponentArguments =
   "("
   a:Expression
-  b:("," e:Expression -> e)*
+  b:AdditionalArgument*
   ")"
   -> (flat [a b])
+;
+
+rule AdditionalArgument =
+  ","
+  e:Expression
+  -> e
 ;
 
 rule ComponentBinding =
@@ -124,12 +147,42 @@ rule CompositionSection =
 rule ModeDeclaration =
   "mode"
   n:Identifier
+  p:ModeParameters?
   ":"
   k:ModeKind
   "{"
   s:CompositionSection*
   "}"
-  -> { kind: "mode", name: n, modeKind: k, sections: s }
+  -> {
+    kind: "mode",
+    name: n,
+    parameters: (coalesce p []),
+    modeKind: k,
+    sections: s
+  }
+;
+
+rule ModeParameter =
+  n:Identifier
+  ":"
+  "("
+  p:Pattern
+  ")"
+  -> { name: n, pattern: p }
+;
+
+rule ModeParameters =
+  "("
+  p:ModeParameter
+  r:AdditionalModeParameter*
+  ")"
+  -> (flat [p r])
+;
+
+rule AdditionalModeParameter =
+  ","
+  m:ModeParameter
+  -> m
 ;
 
 rule ExportedMode =
@@ -212,6 +265,7 @@ rule ExportedProgram =
 ;
 
 rule ModuleDeclaration =
+  | ExportedShape
   | ImportDeclarationSyntax
   | ExportDeclarationSyntax
   | ExportedConfig
@@ -222,6 +276,7 @@ rule ModuleDeclaration =
   | ExportedManager
   | ExportedController
   | ConfigDeclaration
+  | ShapeDeclaration
   | ModeDeclaration
   | ProgramDeclaration
   | ContextDeclaration

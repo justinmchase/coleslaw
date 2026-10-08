@@ -8,6 +8,7 @@ import {
   createDomainExpressionRuntime,
   validateDeclarativeDomain,
 } from "../src/domain-runtime.ts";
+import { shapeDefinitionsFromDeclarations } from "../src/shapes.ts";
 import { executeCli } from "../src/cli.ts";
 import { parseApplicationSource } from "../src/uffda.ts";
 
@@ -18,6 +19,36 @@ async function parseExpression(source: string): Promise<Expression> {
   }
   return unwrap(valueOf(result)) as Expression;
 }
+
+Deno.test(
+  "req:application-shell-001 named shapes reuse Uffda pattern behavior",
+  async () => {
+    const parsed = await parseApplicationSource(
+      `shape Identifier = (string);
+config Settings { id: (Identifier); }`,
+      "named-shape.clsw",
+    );
+    if (!parsed.ok) throw new Error(parsed.failure.message);
+    const shapes = shapeDefinitionsFromDeclarations(
+      parsed.syntax.declarations,
+    );
+    const config = parsed.syntax.declarations.find((declaration) =>
+      declaration.kind === "config"
+    );
+    if (config?.kind !== "config" || config.settings[0].kind !== "setting") {
+      throw new Error("Test config setting was not parsed");
+    }
+    const runtime = createDomainExpressionRuntime(shapes);
+    assertEquals(
+      (await runtime.match(config.settings[0].pattern, "counter-1")).matched,
+      true,
+    );
+    assertEquals(
+      (await runtime.match(config.settings[0].pattern, 42)).matched,
+      false,
+    );
+  },
+);
 
 Deno.test(
   "req:application-shell-010 domain expressions use an explicit pure core scope",

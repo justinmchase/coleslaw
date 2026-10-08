@@ -31,6 +31,11 @@ import type {
   UffdaExpressionNode,
   UffdaPatternNode,
 } from "./syntax.ts";
+import {
+  expandShapeReferences,
+  type ShapeDefinition,
+  shapeDefinitionsFromDeclarations,
+} from "./shapes.ts";
 
 interface DomainManager {
   invoke(operation: string, input: unknown): Promise<unknown>;
@@ -270,7 +275,17 @@ function validatePatternExpressions(
   pattern: unknown,
   span: SourceSpan,
   diagnostics: DomainDiagnostic[],
+  shapes: ReadonlyMap<string, ShapeDefinition> = new Map(),
 ): void {
+  const expanded = expandShapeReferences(pattern as UffdaPatternNode, shapes);
+  if (!expanded.ok) {
+    diagnostics.push({
+      code: "INVALID_NAMED_SHAPE",
+      message: expanded.message,
+      span,
+    });
+    return;
+  }
   const bindings = new Set(patternBindings(pattern));
   bindings.add("_");
   const reported = new Set<string>();
@@ -396,16 +411,17 @@ function validatePatternExpressions(
       }
     }
   };
-  visit(pattern);
+  visit(expanded.pattern);
 }
 
 function validateSettingsPatterns(
   members: readonly RawConfigMember[],
   diagnostics: DomainDiagnostic[],
+  shapes: ReadonlyMap<string, ShapeDefinition> = new Map(),
 ): void {
   for (const member of members) {
     if (member.kind === "group") {
-      validateSettingsPatterns(member.settings, diagnostics);
+      validateSettingsPatterns(member.settings, diagnostics, shapes);
     } else {
       validatePatternExpressions(member.pattern, member.span, diagnostics);
     }
@@ -414,8 +430,13 @@ function validateSettingsPatterns(
 
 export function validateDeclarativeDomain(
   syntax: RawSyntaxModule,
+  importedShapes: ReadonlyMap<string, ShapeDefinition> = new Map(),
 ): readonly DomainDiagnostic[] {
   const diagnostics: DomainDiagnostic[] = [];
+  const shapes = new Map(shapeDefinitionsFromDeclarations(syntax.declarations));
+  for (const [name, shape] of importedShapes) {
+    if (!shapes.has(name)) shapes.set(name, shape);
+  }
   const declarations = new Map(
     syntax.declarations.flatMap((declaration) => {
       const name = declarationName(declaration);
@@ -428,7 +449,14 @@ export function validateDeclarativeDomain(
   );
   for (const declaration of syntax.declarations) {
     if (declaration.kind === "config") {
-      validateSettingsPatterns(declaration.settings, diagnostics);
+      validateSettingsPatterns(declaration.settings, diagnostics, shapes);
+    } else if (declaration.kind === "shape") {
+      validatePatternExpressions(
+        declaration.pattern,
+        declaration.span,
+        diagnostics,
+        shapes,
+      );
     } else if (declaration.kind === "program") {
       for (const selection of declaration.selections) {
         for (const expression of selection.arguments) {
@@ -441,6 +469,14 @@ export function validateDeclarativeDomain(
         }
       }
     } else if (declaration.kind === "mode") {
+      for (const parameter of declaration.parameters) {
+        validatePatternExpressions(
+          parameter.pattern,
+          parameter.span,
+          diagnostics,
+          shapes,
+        );
+      }
       const bindingNames = new Set(
         declaration.sections.flatMap((section) =>
           section.bindings.map((binding) => binding.name)
@@ -450,6 +486,9 @@ export function validateDeclarativeDomain(
         for (const binding of section.bindings) {
           for (const expression of binding.arguments) {
             const bindings = new Set(bindingNames);
+            for (const parameter of declaration.parameters) {
+              bindings.add(parameter.name);
+            }
             const program = syntax.declarations.find((candidate) =>
               candidate.kind === "program"
             );
@@ -580,7 +619,12 @@ export function validateDeclarativeDomain(
       diagnostics,
     );
     for (const field of declaration.fields) {
-      validatePatternExpressions(field.pattern, field.span, diagnostics);
+      validatePatternExpressions(
+        field.pattern,
+        field.span,
+        diagnostics,
+        shapes,
+      );
       validateExpressionScope(
         field.initial,
         new Set(),
@@ -589,10 +633,20 @@ export function validateDeclarativeDomain(
       );
     }
     for (const shape of [...declaration.commands, ...declaration.events]) {
-      validatePatternExpressions(shape.pattern, shape.span, diagnostics);
+      validatePatternExpressions(
+        shape.pattern,
+        shape.span,
+        diagnostics,
+        shapes,
+      );
     }
     for (const invariant of declaration.invariants) {
-      validatePatternExpressions(invariant, declaration.span, diagnostics);
+      validatePatternExpressions(
+        invariant,
+        declaration.span,
+        diagnostics,
+        shapes,
+      );
     }
     for (const state of declaration.states) {
       for (const handler of state.commands) {
@@ -601,6 +655,7 @@ export function validateDeclarativeDomain(
             handler.guard,
             handler.span,
             diagnostics,
+            shapes,
           );
         }
         if (handler.decision.kind === "reject") {
@@ -636,9 +691,9 @@ export function validateDeclarativeDomain(
       new CommandRuntime(
         new Map([[
           declaration.name,
-          aggregateDefinition(declaration),
+          aggregateDefinition(declaration, shapes),
         ]]),
-        createDomainExpressionRuntime(),
+        createDomainExpressionRuntime(shapes),
         new MemoryStateStore(),
       );
     } catch (error) {
@@ -669,11 +724,13 @@ export function validateDeclarativeDomain(
         operation.input,
         operation.span,
         diagnostics,
+        shapes,
       );
       validatePatternExpressions(
         operation.result,
         operation.span,
         diagnostics,
+        shapes,
       );
       validateExpressionScope(
         operation.identity,
@@ -735,6 +792,7 @@ export function validateDeclarativeDomain(
           shape.pattern,
           shape.span,
           diagnostics,
+          shapes,
         );
       }
       validateExpressionScope(
@@ -972,23 +1030,29 @@ export function validateDeclarativeDomain(
 
 function aggregateDefinition(
   declaration: RawAggregateDeclaration,
+  shapes: ReadonlyMap<string, ShapeDefinition> = new Map(),
 ): AggregateDefinition<UffdaPatternNode, UffdaExpressionNode> {
+  const expand = (pattern: UffdaPatternNode): UffdaPatternNode => {
+    const result = expandShapeReferences(pattern, shapes);
+    if (!result.ok) throw new Error(result.message);
+    return result.pattern;
+  };
   return {
     name: declaration.name,
     identityField: declaration.identityField,
     fields: Object.fromEntries(declaration.fields.map((field) => [
       field.name,
-      { pattern: field.pattern, initial: field.initial },
+      { pattern: expand(field.pattern), initial: field.initial },
     ])),
     commands: Object.fromEntries(declaration.commands.map((command) => [
       command.name,
-      command.pattern,
+      expand(command.pattern),
     ])),
     events: Object.fromEntries(declaration.events.map((event) => [
       event.name,
-      event.pattern,
+      expand(event.pattern),
     ])),
-    invariants: declaration.invariants,
+    invariants: declaration.invariants.map(expand),
     start: declaration.start,
     states: Object.fromEntries(declaration.states.map((state) => [
       state.name,
@@ -1129,16 +1193,20 @@ function domainScope(input: unknown): Scope {
   });
 }
 
-export function createDomainExpressionRuntime(): PatternExpressionRuntime<
+export function createDomainExpressionRuntime(
+  shapes: ReadonlyMap<string, ShapeDefinition> = new Map(),
+): PatternExpressionRuntime<
   UffdaPatternNode,
   UffdaExpressionNode
 > {
   return {
     async match(pattern, input) {
-      const result = await matchPattern(pattern, domainScope(input));
+      const expanded = expandShapeReferences(pattern, shapes);
+      if (!expanded.ok) return { matched: false, value: input };
+      const result = await matchPattern(expanded.pattern, domainScope(input));
       if (
         isClean(result) && result.kind === MatchKind.Ok &&
-        await closedObjectsMatch(pattern, input)
+        await closedObjectsMatch(expanded.pattern, input)
       ) {
         return { matched: true, value: unwrap(valueOf(result)) };
       }
@@ -1285,8 +1353,12 @@ async function closedObjectsMatch(
 async function matchRequestShape(
   pattern: UffdaPatternNode,
   value: unknown,
+  shapes: ReadonlyMap<string, ShapeDefinition> = new Map(),
 ): Promise<{ matched: boolean; value: unknown }> {
-  const result = await createDomainExpressionRuntime().match(pattern, value);
+  const result = await createDomainExpressionRuntime(shapes).match(
+    pattern,
+    value,
+  );
   if (!result.matched) {
     return { matched: false, value };
   }
@@ -1324,6 +1396,7 @@ function managerDescriptor(
   manager: DeclarativeManager,
   commandRuntime: () => CommandRuntime<UffdaPatternNode, UffdaExpressionNode>,
   definitions: ReadonlyMap<string, RawAggregateDeclaration>,
+  shapes: ReadonlyMap<string, ShapeDefinition>,
 ): HostComponentDescriptor<DomainManager> {
   return {
     kind: "manager",
@@ -1345,7 +1418,7 @@ function managerDescriptor(
             let commandStarted = false;
             let mayHaveCommitted = false;
             try {
-              const runtime = createDomainExpressionRuntime();
+              const runtime = createDomainExpressionRuntime(shapes);
               const matched = await runtime.match(operation.input, input);
               if (!matched.matched) {
                 return {
@@ -1414,6 +1487,7 @@ function controllerDescriptor(
     string,
     HostComponentDescriptor<DomainManager>
   >,
+  shapes: ReadonlyMap<string, ShapeDefinition>,
 ): HostComponentDescriptor<DomainController> {
   const managerNames = new Set(
     controller.declaration.routes.map((route) => route.operation.segments[0]),
@@ -1449,7 +1523,7 @@ function controllerDescriptor(
               const pathShape = requestShape(route, "path");
               const pathResult = pathShape === undefined
                 ? { matched: true, value: path }
-                : await matchRequestShape(pathShape.pattern, path);
+                : await matchRequestShape(pathShape.pattern, path, shapes);
               if (!pathResult.matched) continue;
               pathMatched = true;
               allowedMethods.add(route.method);
@@ -1475,6 +1549,7 @@ function controllerDescriptor(
                 : await matchRequestShape(
                   queryShape.pattern,
                   rawQuery,
+                  shapes,
                 );
               if (!queryResult.matched) {
                 return problemResponse(
@@ -1490,6 +1565,7 @@ function controllerDescriptor(
                 : await matchRequestShape(
                   headersShape.pattern,
                   rawHeaders,
+                  shapes,
                 );
               if (!headersResult.matched) {
                 return problemResponse(
@@ -1533,6 +1609,7 @@ function controllerDescriptor(
                 : await matchRequestShape(
                   bodyShape.pattern,
                   rawBody,
+                  shapes,
                 );
               if (!bodyResult.matched) {
                 return problemResponse(
@@ -1556,17 +1633,18 @@ function controllerDescriptor(
                   "Internal server error",
                 );
               }
-              const input = await createDomainExpressionRuntime().evaluate(
-                route.input,
-                {
-                  request: {
-                    path: pathResult.value,
-                    query: queryResult.value,
-                    headers: headersResult.value,
-                    body: bodyResult.value,
+              const input = await createDomainExpressionRuntime(shapes)
+                .evaluate(
+                  route.input,
+                  {
+                    request: {
+                      path: pathResult.value,
+                      query: queryResult.value,
+                      headers: headersResult.value,
+                      body: bodyResult.value,
+                    },
                   },
-                },
-              );
+                );
               const outcome = await manager.invoke(
                 operationName,
                 input,
@@ -1617,8 +1695,15 @@ function controllerDescriptor(
 
 export function createDeclarativeHostComponents(
   syntax: RawSyntaxModule,
-  options: { readonly stateStore?: StateStore } = {},
+  options: {
+    readonly stateStore?: StateStore;
+    readonly shapes?: ReadonlyMap<string, ShapeDefinition>;
+  } = {},
 ): ReadonlyMap<string, HostComponentDescriptor> {
+  const shapes = new Map(shapeDefinitionsFromDeclarations(syntax.declarations));
+  for (const [name, shape] of options.shapes ?? []) {
+    if (!shapes.has(name)) shapes.set(name, shape);
+  }
   const contexts = declarationContexts(syntax);
   const aggregates = new Map(
     syntax.declarations.flatMap((declaration) =>
@@ -1642,7 +1727,7 @@ export function createDeclarativeHostComponents(
   const runtimeDefinitions = new Map(
     [...aggregates.values()].map((aggregate) => [
       contextKind(contexts.get(aggregate.name) ?? "", aggregate.name),
-      aggregateDefinition(aggregate),
+      aggregateDefinition(aggregate, shapes),
     ]),
   );
   let runtime:
@@ -1651,7 +1736,7 @@ export function createDeclarativeHostComponents(
   const commandRuntime = () =>
     runtime ??= new CommandRuntime(
       runtimeDefinitions,
-      createDomainExpressionRuntime(),
+      createDomainExpressionRuntime(shapes),
       options.stateStore ?? new MemoryStateStore(),
     );
 
@@ -1665,6 +1750,7 @@ export function createDeclarativeHostComponents(
       manager,
       commandRuntime,
       aggregates,
+      shapes,
     );
     managerDescriptors.set(manager.declaration.name, descriptor);
     descriptors.set(
@@ -1682,6 +1768,7 @@ export function createDeclarativeHostComponents(
       controller,
       managerDeclarations,
       managerDescriptors,
+      shapes,
     );
     if (controller.context.length === 0) {
       descriptors.set(declaration.name, descriptor);

@@ -1,12 +1,15 @@
-import { JsrPackages } from "@justinmchase/uffda";
+import type { JsrPackages } from "@justinmchase/uffda";
 import { isClean, type Match, MatchKind, valueOf } from "@justinmchase/uffda";
 import { analyzeMatchFailure } from "@justinmchase/uffda";
 import { type GrammarOptions, parseGrammar } from "@justinmchase/uffda/grammar";
-import { parse as parseJsonc } from "@std/jsonc";
-import { fromFileUrl, join, relative, resolve } from "@std/path";
+import { fromFileUrl, resolve } from "@std/path";
 import type { SettingMatcher } from "./config.ts";
 import { sourceSpan } from "./diagnostics.ts";
 import { createDomainExpressionRuntime } from "./domain-runtime.ts";
+import {
+  expandShapeReferences,
+  shapeDefinitionsFromDeclarations,
+} from "./shapes.ts";
 import {
   type ColeslawProject,
   findColeslawProject,
@@ -26,6 +29,7 @@ import type {
   RawModeSelection,
   RawNamePath,
   RawProgramDeclaration,
+  RawShapeDeclaration,
   RawSyntaxDeclaration,
   RawSyntaxModule,
   SourceSpan,
@@ -33,8 +37,6 @@ import type {
 
 const PACKAGE = "@justinmchase/uffda";
 export const UFFDA_API_VERSION = "0.9.1";
-const DEVELOPMENT_VERSION = UFFDA_API_VERSION;
-const DEVELOPMENT_REGISTRY = new URL("https://coleslaw-dev.invalid/");
 
 export type ApplicationSyntax = RawSyntaxModule;
 
@@ -108,137 +110,6 @@ interface ParsedAggregateDeclaration extends
   readonly commands: readonly Omit<RawAggregateShape, "span">[];
   readonly events: readonly Omit<RawAggregateShape, "span">[];
   readonly states: readonly ParsedAggregateState[];
-}
-
-function fromHex(bytes: Uint8Array): string {
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
-    "",
-  );
-}
-
-async function digest(bytes: Uint8Array): Promise<string> {
-  const buffer = new Uint8Array(bytes).buffer;
-  return fromHex(new Uint8Array(await crypto.subtle.digest("SHA-256", buffer)));
-}
-
-function localUffdaRoot(): string | undefined {
-  const configured = Deno.env.get("COLESLAW_UFFDA_ROOT");
-  if (configured !== undefined) {
-    return resolve(Deno.cwd(), configured);
-  }
-  return undefined;
-}
-
-async function readPackageFiles(
-  root: string,
-): Promise<Map<string, Uint8Array>> {
-  const files = new Map<string, Uint8Array>();
-  const projectBytes = await Deno.readFile(join(root, "uffda.jsonc"));
-  files.set("uffda.jsonc", projectBytes);
-  const projectValue: unknown = parseJsonc(
-    new TextDecoder().decode(projectBytes),
-  );
-  if (
-    typeof projectValue !== "object" || projectValue === null ||
-    Array.isArray(projectValue)
-  ) {
-    throw new Error("Uffda project file must contain an object");
-  }
-  const configuredOutDir = Reflect.get(projectValue, "outDir") ?? "./bin";
-  if (
-    typeof configuredOutDir !== "string" ||
-    !configuredOutDir.startsWith("./")
-  ) {
-    throw new Error("Uffda project outDir must be project-relative");
-  }
-  const outDir = resolve(root, configuredOutDir);
-  const relativeOutDir = relative(root, outDir);
-  if (
-    relativeOutDir === ".." || relativeOutDir.startsWith("../") ||
-    relativeOutDir.startsWith("..\\")
-  ) {
-    throw new Error("Uffda project outDir escapes its root");
-  }
-  const collect = async (folder: string): Promise<void> => {
-    const directory = join(root, folder);
-    for await (const entry of Deno.readDir(directory)) {
-      const relativePath = `${folder}${entry.name}`;
-      if (entry.isDirectory) {
-        await collect(`${relativePath}/`);
-      } else if (entry.isFile) {
-        files.set(
-          relativePath,
-          await Deno.readFile(join(root, relativePath)),
-        );
-      }
-    }
-  };
-  await collect(`${relativeOutDir.replaceAll("\\", "/")}/`);
-  return files;
-}
-
-async function developmentFetch(
-  files: ReadonlyMap<string, Uint8Array>,
-): Promise<(url: URL) => Promise<Response>> {
-  const manifest: Record<string, { size: number; checksum: string }> = {};
-  for (const [path, bytes] of files) {
-    manifest[`/${path}`] = {
-      size: bytes.length,
-      checksum: `sha256-${await digest(bytes)}`,
-    };
-  }
-  const served = new Map<string, Uint8Array>();
-  served.set(
-    `${PACKAGE}/meta.json`,
-    new TextEncoder().encode(JSON.stringify({
-      scope: "justinmchase",
-      name: "uffda",
-      versions: { [DEVELOPMENT_VERSION]: {} },
-    })),
-  );
-  served.set(
-    `${PACKAGE}/${DEVELOPMENT_VERSION}_meta.json`,
-    new TextEncoder().encode(JSON.stringify({ manifest })),
-  );
-  for (const [path, bytes] of files) {
-    served.set(`${PACKAGE}/${DEVELOPMENT_VERSION}/${path}`, bytes);
-  }
-  return (url) => {
-    const path = decodeURIComponent(url.pathname.replace(/^\//, ""));
-    const bytes = served.get(path);
-    return Promise.resolve(
-      bytes
-        ? new Response(new Uint8Array(bytes).buffer)
-        : new Response("not found", { status: 404 }),
-    );
-  };
-}
-
-async function createDevelopmentPackages(
-  project: ColeslawProject,
-): Promise<JsrPackages> {
-  const root = localUffdaRoot();
-  if (root === undefined) {
-    throw new Error(
-      `Uffda ${UFFDA_API_VERSION} with the Coleslaw grammar/runtime exports is not published yet; set COLESLAW_UFFDA_ROOT to a compatible checkout`,
-    );
-  }
-  let files: Map<string, Uint8Array>;
-  try {
-    files = await readPackageFiles(root);
-  } catch (error) {
-    throw new Error(
-      `Unable to read Uffda prerequisite checkout at ${root}: ${
-        error instanceof Error ? error.message : String(error)
-      }; use commit 503ee800e610862d390fd1caaf85f7533214b780 and run "deno task compile:lang" there`,
-      { cause: error },
-    );
-  }
-  const fetch = await developmentFetch(files);
-  return projectPackages(project, {
-    registry: DEVELOPMENT_REGISTRY,
-    fetch,
-  });
 }
 
 function collectSpans(
@@ -327,6 +198,9 @@ function modeDeclaration(
 ): RawModeDeclaration & { readonly span: SourceSpan } {
   return {
     ...withSpan(value, spans, "ModeDeclaration"),
+    parameters: (value.parameters ?? []).map((parameter) => ({
+      ...withSpan(parameter, spans, "ModeParameter"),
+    })),
     modeKind: typeof value.modeKind === "string"
       ? value.modeKind
       : namePath(value.modeKind, spans),
@@ -338,6 +212,13 @@ function modeDeclaration(
       })),
     })),
   };
+}
+
+function shapeDeclaration(
+  value: RawShapeDeclaration,
+  spans: SpanCatalog,
+): RawShapeDeclaration & { readonly span: SourceSpan } {
+  return withSpan(value, spans, "ShapeDeclaration");
 }
 
 function programDeclaration(
@@ -465,6 +346,7 @@ function syntaxWithSpans(
           span: spans.takeNext([
             "ExportName",
             "ExportedConfig",
+            "ExportedShape",
             "ExportedMode",
             "ExportedProgram",
             "ExportedContext",
@@ -477,6 +359,9 @@ function syntaxWithSpans(
       }
       case "config":
         declarations.push(configDeclaration(declaration, spans));
+        break;
+      case "shape":
+        declarations.push(shapeDeclaration(declaration, spans));
         break;
       case "mode":
         declarations.push(modeDeclaration(declaration, spans));
@@ -553,7 +438,7 @@ export async function parseApplicationSource(
       `clsw.jsonc maps ${PACKAGE} to ${uffdaSpecifier}; expected Uffda ${UFFDA_API_VERSION}`,
     );
   }
-  const packages = await createDevelopmentPackages(project);
+  const packages = projectPackages(project);
   const grammarUrl = new URL("./grammar/application.uff", import.meta.url);
   const languageProject = await findColeslawProject(fromFileUrl(grammarUrl));
   const result: Match<ApplicationSyntax> = await parseGrammar({
@@ -580,12 +465,22 @@ export async function parseApplicationSource(
         throw error;
       }
       const domainRuntime = createDomainExpressionRuntime();
+      const shapes = shapeDefinitionsFromDeclarations(
+        locatedSyntax.declarations,
+      );
       return {
         ok: true,
         syntax: locatedSyntax,
         settingMatcher: {
           async match(pattern, input) {
-            const matched = await domainRuntime.match(pattern, input);
+            const expanded = expandShapeReferences(pattern, shapes);
+            if (!expanded.ok) {
+              return { matched: false, expected: expanded.message };
+            }
+            const matched = await domainRuntime.match(
+              expanded.pattern,
+              input,
+            );
             if (matched.matched) {
               return { matched: true, value: matched.value };
             }
