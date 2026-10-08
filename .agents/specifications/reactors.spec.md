@@ -34,21 +34,32 @@ program, so the translation belongs at the boundary; keeping external reactors
 to managers prevents foreign data from directly driving aggregates or effects.
 
 - An external event MUST have a declared name and a shape for its payload. Its
-  source implementation MUST deliver the payload with a stable source identity
-  and delivery count.
+  source implementation MUST deliver the payload with the source identity, an
+  event identity stable across redeliveries and unique within that source, and
+  a delivery count. Events from different sources MUST NOT share an identity
+  merely because the sources use the same event identifier.
+- The runtime MUST match an external payload against its declared shape before
+  the reactor's guard or any manager invocation. A mismatch MUST fail and be
+  reported, naming the source, event identity, shape, failing path, and expected
+  value. It MUST NOT be silently acknowledged.
 - An external-event reactor MUST invoke managers only. It MUST NOT send
   aggregate commands, read projections, call services, or enqueue messages
   directly. A manager it invokes may use its ordinary capabilities, including
   sending messages atomically with an accepted command (see
   [managers](./managers.spec.md#the-command)).
+- A violation of an external-event reactor's capability restrictions MUST be a
+  compile error naming the reactor and the disallowed step.
 - An external event's source MUST deliver it at least once. A failed reaction
-  MUST be run again from its start state with the same source identity.
+  MUST be run again from its start state with the same source and event
+  identities. Two reactors observing that event MUST have independent
+  completion; a failure in one MUST NOT mark the other's delivery complete.
 - External events MUST be handled in events mode. The source implementation
   MUST preserve any ordering guarantee the external source declares; absent such
   a guarantee, events MAY arrive in any order.
 - External events MUST NOT be treated as this program's aggregate events or
-  recorded in the aggregate event log. Handling them MUST NOT change the
-  outcome of any aggregate command.
+  recorded as local aggregate events. Commands sent by invoked managers MUST
+  retain their ordinary transaction and outcome rules; completion or failure
+  of the external reaction MUST NOT revise an already-finished command outcome.
 
 ## Reactions
 
@@ -62,7 +73,7 @@ reaction progresses.
 - The machine MAY declare variables, set by handlers and read by expressions,
   which last for the reaction.
 - Each state that is not final MUST perform exactly one step when the machine
-  enters it:
+  enters it, subject to the external-event restrictions above:
   - call a query or an effect of a service (see [services](./services.spec.md));
   - read a projection;
   - send a command to an aggregate;
@@ -71,18 +82,23 @@ reaction progresses.
   - or none, to choose the next state from the variables alone.
 - A step's arguments MUST be computed by expressions from the event, its record,
   and the variables.
+- A manager invocation's result is the manager operation's result (see
+  [managers](./managers.spec.md#results)). A message send completes as sent,
+  with its identity, only after the outbox write is confirmed; a failed or
+  unknown write fails the reaction.
 - A state MUST declare handlers for its step's result: each guarded by a pattern
   the result must match, tried in order, which MAY set variables and MUST choose
   the next state. A result no handler matches MUST fail the reaction, naming the
   state and the result.
 - Reaching a final state completes the reaction. A reaction gives no result.
-- Given the same event and the same step results, a reaction MUST take the same
-  path. Its only variation is what its steps return.
+- Given the same event, delivery record, and step results, a reaction MUST take
+  the same path. External redelivery may change the delivery count as well as
+  step results.
 
 ## Commands, messages, and effects
 
-- A reaction MAY send several commands and call several effects, in the order
-  its machine performs them.
+- An internal-event reaction MAY send several commands and call several effects,
+  in the order its machine performs them.
 - An internal-event reaction MAY invoke managers and enqueue messages as well.
   An external-event reaction is limited to managers, as
   [external events](#external-events) requires.
@@ -99,19 +115,30 @@ Events are delivered at least once, and a reaction that fails is run again from
 its start state. So every step a reaction performs may be performed again for
 the same event.
 
-- A reaction MUST give the same outcome when run again for the same event. The
-  steps already performed in an earlier attempt are performed again.
+- A repeated reaction MUST start at its start state, not resume after the
+  earlier attempt's last step. It MAY receive different query or command
+  results, and therefore take a different path; the same event, record, and
+  step results MUST still produce the same path.
+- A reaction MUST be written to tolerate steps being performed again without
+  repeating a business change that has already happened.
 - Commands are safe to repeat when the aggregate's state machine ignores or
   rejects a command whose change has already happened. A reaction SHOULD send
   commands its target aggregates handle this way.
 - Effects are safe to repeat when their implementations recognize the event that
   caused them (see
   [effects and repeats](./services.spec.md#effects-and-repeats)).
+- Message send identities MUST be stable when the same reaction step is
+  performed again (see [queues](./queues.spec.md#messages)). Stable identities
+  do not guarantee identical payloads when query results change; message
+  handlers MUST use a domain identifier or the message identity to make
+  repeated work safe.
 
 ## Order
 
-Events are ordered the way a partitioned log such as Kafka orders them: by a key
-that shards them.
+Internal events are ordered the way a partitioned log such as Kafka orders them:
+by a key that shards them. These aggregate-derived keys and record ordering rules
+do not apply to external events; those follow their source's declared ordering
+(see [external events](#external-events)).
 
 - Every event MUST have a shard key. By default it is the event's aggregate
   kind, the event's name, and the aggregate's identity, so each kind of event
@@ -148,8 +175,10 @@ an expression fails.
 - A failed reaction MUST be reported, naming the reactor, the event, and why it
   failed.
 - The event MUST then be delivered to that reactor again. Commands the failed
-  attempt sent stand, and effects it called have happened; the next attempt
-  repeats them (see [repeats](#repeats)).
+  attempt saved and messages it committed stand, and effects it successfully
+  called have happened; the next attempt may repeat those steps (see
+  [repeats](#repeats)). A failed write or effect call with an unknown result may
+  also have taken effect; failure MUST NOT imply that nothing happened.
 - A reaction's failure MUST NOT affect other reactors, or the aggregate whose
   event it was.
 

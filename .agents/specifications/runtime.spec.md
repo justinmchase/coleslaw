@@ -62,13 +62,15 @@ section says what each step reads and writes.
   messages wait in the same store as the state until they are relayed.
 - Save MUST succeed only if the stored version equals the version loaded. For an
   aggregate with no stored state the loaded version is zero, so of two commands
-  racing to create one aggregate at most one saves.
-- A decision accepted with no events and no messages MUST save nothing and
-  record nothing. It cannot conflict, and its outcome is accepted with the
-  version loaded.
-- A decision accepted with no events but with messages MUST atomically append
-  those messages to the outbox, conditioned on the stored version still being
-  the one loaded. It MUST NOT change the aggregate's state or version.
+  emitting events and racing to create one aggregate at most one saves against
+  version zero.
+- A decision accepted with no events MUST save nothing and record nothing,
+  including no messages attached by its manager. It cannot conflict, and its
+  outcome is accepted with the version loaded.
+- Before Save, the runtime MUST validate any messages that will be enqueued
+  against their queue shapes and compute their order-group keys and records.
+  A failure MUST fail the command before anything is committed. A conflicted
+  attempt MUST leave no event or message records behind.
 - Between one command's Load and its Save, other commands MAY save the same
   aggregate. Nothing is locked; a conflict is detected at Save (see
   [concurrency](./aggregates.spec.md#concurrency)).
@@ -79,9 +81,8 @@ Handling a command ends in exactly one of the outcomes the aggregates chapter
 defines (see [outcomes](./aggregates.spec.md#outcomes)). This section says which
 step produces each.
 
-- **Accepted**: Save succeeded, or the decision emitted no events and no
-  messages. The outcome carries the events emitted and the aggregate's new
-  version.
+- **Accepted**: Save succeeded, or the decision emitted no events. The outcome
+  carries the events emitted and the aggregate's new version.
 - **Rejected**: the payload did not match, the decision rejected, or Check
   failed. Nothing was saved.
 - **Conflicted**: Save failed because the stored version had changed, on every
@@ -126,11 +127,13 @@ against the current state is always safe (see
 
 ## Other repeats
 
-Retrying a conflicted command is the only repeat the runtime makes by itself.
-Every other repeat comes from delivery.
+Retrying a conflicted command is the only repeat of program work the runtime
+makes within one invocation. Relay and delivery are at least once.
 
 - The runtime MUST NOT retry a failed service call, including a call to a
-  runtime service (see [services](./services.spec.md#failure)).
+  runtime service, as another step of the same invocation (see
+  [services](./services.spec.md#failure)). A later relay or delivery attempt
+  MAY call that service again for a record left pending.
 - A failed reaction MUST be run again from its start state when its event is
   delivered again, not resumed from the step that failed (see
   [reactors](./reactors.spec.md#repeats)).
@@ -168,7 +171,10 @@ Every other repeat comes from delivery.
 ## Delivering events
 
 An event exists to tell what observes it about a change. The runtime delivers it
-from the record Save made, then lets it go.
+from the record Save made, then lets it go. This section applies to internal
+aggregate events. External delivery follows
+[external events](./reactors.spec.md#external-events); external-event reactors
+are not destinations of this relay.
 
 - Every recorded event MUST be delivered at least once to every reactor and
   monitor that observes it (see
@@ -216,7 +222,9 @@ from the record Save made, then lets it go.
 - A reaction MUST receive the event's payload and its whole record.
 - When a reaction calls an effect, the runtime MUST make the causing event's
   identification, its aggregate's kind and identity and its version, available
-  to the implementation, so the implementation can recognize a repeat (see
+  to the implementation, together with the reactor's context and name, the
+  calling state, and its visit count, so the implementation can distinguish
+  repeated steps from separate calls (see
   [effects and repeats](./services.spec.md#effects-and-repeats)).
 
 ## Outbox messages
@@ -225,22 +233,29 @@ The state store is the durable outbox for messages. The runtime relays them to
 the queue implementation only after their outbox record is committed.
 
 - A manager's message record MUST be committed atomically with the command it
-  enqueues it with. A rejected, conflicted, or failed command MUST leave no
-  messages in the outbox.
+  enqueues it with, and only when the command emits at least one event. A
+  rejected, conflicted, or zero-event accepted command MUST leave no messages
+  in the outbox. A failure known not to have committed MUST leave no messages;
+  an unknown commit result follows [outcomes](#outcomes).
 - A reaction's message record MUST be committed before its send step completes.
   A failure after that point MUST NOT remove the message; a repeated reaction
-  may enqueue the same logical message again.
+  may enqueue the same logical message again with the same identity (see
+  [message identities](./queues.spec.md#messages)). If the commit result is
+  unknown, the reaction MUST fail with a warning that its message may stand.
 - The outbox MUST retain each message until its queue implementation has
   accepted it. If relay fails or its result is unknown, the runtime MUST retry
   with the same message identity.
 - A queue implementation MUST tolerate receiving the same message identity
-  more than once, or the runtime MUST ensure duplicate acceptance does not
-  create multiple logical messages. Delivery from the queue to its consumer
-  remains at least once (see [queues](./queues.spec.md#delivery)).
+  more than once. It MAY suppress duplicate submissions or accept separate
+  queue items with that identity. Neither the relay nor the queue promises
+  exactly-once delivery or permanent duplicate suppression (see
+  [queues](./queues.spec.md#delivery)).
 - A message MUST NOT be delivered to its consumer before its outbox record is
   committed.
 - The relay MUST preserve outbox commit order for messages in the same queue
   order group, including the declaration order of messages committed together.
+  It MUST NOT advance to a later distinct message until acceptance of the
+  preceding one is confirmed, even if several processes share the outbox.
 
 ## Keeping events
 
@@ -286,17 +301,19 @@ no technology for them and the config chooses their implementations.
     state with its event records and manager-enqueued messages, atomically and
     on the condition of the version, giving either saved or conflicted; appends
     reaction-enqueued messages durably; gives pending events and messages to
-    the relay; marks them complete for a destination; and gives every stored
-    state of a kind.
+    the relay in record order per shard key or queue order group; marks them
+    complete for a destination; and gives every stored state of a kind.
   - **Event source**: accepts internal event records from the relay, and
     delivers them to each internal-event reactor in events mode, in record
     order per shard key, until that reactor completes each one.
-  - **Message broker**: accepts relayed outbox messages and delivers them to
-    the one consumer of each queue, respecting leases, dispositions, and order
-    groups (see [queues](./queues.spec.md)).
+  - **Message broker**: the runtime's queue capability, provided through the
+    selected implementation of each reached queue. It accepts relayed outbox
+    messages and delivers them to the one consumer of that queue, respecting
+    leases, dispositions, and order groups (see [queues](./queues.spec.md)).
   - **External event source**: gives external-event reactors declared events
-    with their payload, stable source identity, and delivery count. Its
-    implementation is configured at the program's boundary (see
+    with their payload, source identity, stable event identity within that
+    source, and delivery count. Its implementation is configured at the
+    program's boundary (see
     [external events](./reactors.spec.md#external-events)).
 - Only the runtime MAY call a runtime service's operations. No declaration in a
   program MAY call them.
@@ -330,7 +347,10 @@ checker can choose (see the overview's
   - what each service returns, including the clock, identities, and the runtime
     services;
   - which pending record is delivered next to which destination, whether a
-    delivered record is delivered again, and where a process stops.
+    delivered record is delivered again, whether a relay accepts duplicate
+    copies, and where a process stops;
+  - when a queue lease expires, whether a disposition commits, and whether a
+    storage or broker call commits but reports an unknown result.
 - Everything else the runtime does MUST be deterministic: given the same choices
   at those edges, a run MUST take the same path and give the same outcomes,
   versions, records, and shard keys.

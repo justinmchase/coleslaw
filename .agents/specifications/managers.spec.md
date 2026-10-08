@@ -31,8 +31,10 @@ sends that aggregate a command. It MAY also enqueue messages with that command
   each computed by expressions from the input, and a result computed from the
   command's outcome.
 - An operation MAY declare messages to enqueue with its command, computed by
-  expressions from its input and variables. The runtime MUST enqueue them only
-  if the command is accepted, atomically with the command's state and events.
+  expressions from its input and variables before the command step starts.
+  They MUST be attached to the command, not sent in a separate step after its
+  outcome. The runtime MUST enqueue them only if the command is accepted and
+  emits at least one event, atomically with the command's state and events.
 
 An operation that needs more, such as reading a projection, calling a query, or
 choosing between commands, runs a state machine.
@@ -74,7 +76,11 @@ through messages the operation enqueues with that command.
 - An operation MUST send at most one command.
 - An operation MUST NOT enqueue a message unless it sends a command. Its
   messages MUST be written atomically with that command's accepted change and
-  MUST NOT be enqueued when the command is rejected, conflicted, or failed.
+  MUST NOT be enqueued when the command is rejected, conflicted, or accepted
+  with no events. A failure known not to have committed MUST enqueue nothing;
+  an unknown commit result follows [runtime outcomes](./runtime.spec.md#outcomes).
+- The compiler MUST reject an operation that declares messages without a
+  command or as a separate post-command step.
 - An operation MAY enqueue messages only to queues of its own context (see
   [queues](./queues.spec.md#declaring-a-queue)).
 - The compiler MUST reject an operation state machine in which any path from the
@@ -100,14 +106,17 @@ own response, such as an HTTP status:
   to complete instead. A rejection is a normal business outcome.
 - **Conflicted**: the command conflicted, and no handler chose otherwise.
 - **Failed**, with an error: the operation met a defect or a failed service
-  call. Nothing the operation would have changed was saved, unless its command
-  was accepted before the failure.
+  call. Its command's change and messages may stand if it was accepted before
+  the failure or if the runtime could not learn whether Save committed.
 
 - A result value that does not match the result shape MUST end the operation as
   failed.
 - When an operation's command is accepted and the operation then fails, the
   command's change and its atomically enqueued messages stand. The failure MUST
   say so.
+- An operation MUST preserve a command failure's warning that its change and
+  messages may stand; it MUST NOT turn an unknown commit result into a claim
+  that nothing was saved.
 
 ## Invoked more than once
 
@@ -118,6 +127,7 @@ operation may be invoked again with the same input.
   command changes anything is the aggregate's decision, made by its state
   machine: a command whose change has already happened is ignored or rejected by
   the state the aggregate is now in.
+- An ignored or rejected repeated command MUST enqueue no new messages.
 
 ## Open questions
 
