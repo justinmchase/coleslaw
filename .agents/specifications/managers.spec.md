@@ -94,6 +94,10 @@ through messages the operation enqueues with that command.
 - A manager MUST NOT read an aggregate's stored state directly. It reads what it
   needs from projections, and MAY wait until a projection reflects the version
   its command produced.
+- Projection reads and collection-returning service queries MUST follow
+  [queries](./queries.spec.md). A manager MUST inherit the selected mode's
+  traversal capability and any invoking API request's shared read-step budget;
+  entering another operation MUST NOT reset that budget.
 
 ## Results
 
@@ -132,7 +136,8 @@ operation may be invoked again with the same input.
 ## Open questions
 
 - **Bounding a machine.** An operation state machine may loop, for example
-  reading pages of a projection. Whether the number of steps is bounded, and
-  how.
+  reading pages of a projection. Read steps in API mode are bounded by
+  [queries](./queries.spec.md#mode-capability); how other steps and loops are
+  bounded remains open.
 - **Waiting for projections.** How long an operation waits for a projection to
   reflect its command, and what it gives when the wait ends first.

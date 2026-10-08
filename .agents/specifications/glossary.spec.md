@@ -111,6 +111,18 @@ capitals.
   changed after the decision was made.
 - **Projection**: a read model derived from the stored states of one or more
   aggregates. A projection can always be rebuilt from those states.
+- **Read endpoint**: a named projection read or collection-returning service
+  query with shaped inputs, selected results, and declared read limits.
+- **Page**: a bounded ordered list of selected items with a continuation cursor,
+  or no continuation when the read found no more matching items.
+- **Cursor**: opaque data identifying an endpoint's saved ordering boundary and
+  selection, not a frozen snapshot or permission to read.
+- **Nested collection**: a collection selected inside an item or keyed result,
+  paged under its own limits and continuation.
+- **Query policy**: numeric defaults and limits inherited from Coleslaw,
+  optionally overridden by program, config, and endpoint declarations.
+- **Full traversal**: following pages until a collection is exhausted; allowed
+  only by the selected mode kind's traversal capability.
 
 ## State machines
 

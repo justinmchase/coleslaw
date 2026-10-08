@@ -79,6 +79,10 @@ aggregates.
   such as `export Product.ProductDiscontinued;`.
 - A context MAY export events, projections, shapes, and funcs, which other
   contexts use, and controllers, consumers, jobs, and reactors, which modes run.
+- An exported projection MUST expose reads only through its declared
+  [read endpoints](./queries.spec.md#declared-access), not unrestricted access
+  to its stored values. Endpoints belong to the projection, not to a separate
+  context member.
 - A context MUST NOT export aggregates, managers, queues, or services. Its
   aggregates change only through its own managers and reactors, its queues are
   used only within the context, and its managers are reached only through its

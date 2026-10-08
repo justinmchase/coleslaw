@@ -191,8 +191,9 @@ response.
   status; they decide nothing.
 - A route MUST NOT answer a result other than completed with a `2xx` status, and
   MUST NOT change the status of a conflicted or failed result.
-- A route reading a projection by key MUST respond `200` with the value, or
-  `404` when the projection holds no value for the key.
+- A route reading a projection by key MUST respond `200` with the endpoint's
+  selected value, including page envelopes for selected collections, or `404`
+  when the projection holds no value for the key.
 - A route MAY declare a shape for its response body. A body that does not match
   it MUST end the request as failed, as an operation's result that does not
   match its result shape does.
@@ -219,9 +220,12 @@ or step produced it.
 
 - A route that reads a set of values, such as the approvals awaiting the
   principal, MUST be paged and limited, so that no request returns an unbounded
-  set. Paging, limits, sorting, and filtering are defined by the planned
-  `queries` chapter.
+  set. Paging, limits, sorting, and filtering follow the selected projection
+  endpoint's [query contract](./queries.spec.md).
 - A route MUST NOT iterate over a whole collection while serving a request.
+- API mode's prohibition MUST also apply through managers and in-process
+  reactors. All reads for one request MUST share its
+  [read-step budget](./queries.spec.md#mode-capability).
 
 ## Authentication
 
