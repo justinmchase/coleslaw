@@ -261,10 +261,13 @@ The approved plan was merged in #16. Implementation continues in #17.
 - Grammar, CLI, composition, and both runnable examples are implemented. Uffda
   0.9.2 fixes the
   [JSR built-in grammar defect](https://github.com/justinmchase/uffda/issues/271)
-  encountered in 0.9.1. Released-CLI grammar compilation, type checking, lint,
-  formatting, and the specification audit pass. A checked Counter artifact was
-  started and verified over HTTP: two increments yielded counts 2 and 5 with
-  versions 1 and 2; the smoke-test process was stopped afterwards.
+  encountered in 0.9.1. All 56 tests pass using published JSR dependencies only,
+  including real loopback HTTP and shape/parameter checks. The local suite takes
+  about 22 minutes with published-package resolution. Released-CLI grammar
+  compilation, type checking, lint, formatting, and the specification audit
+  pass. A checked Counter artifact was started and verified over HTTP: two
+  increments yielded counts 2 and 5 with versions 1 and 2; the smoke-test
+  process was stopped afterwards.
 - Follow-up validation fixed controller-wide routing and `Allow`, shaped path
   routing, explicit imported config binding, private import scoping, genuine
   stale-input detection, custom project output directories, launcher working
