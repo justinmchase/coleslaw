@@ -1,14 +1,14 @@
 {
-  // Requires the public Uffda 0.9.1 integration APIs from JSR.
+  // Requires the public Uffda 0.9.2 integration APIs from JSR.
   "imports": {
-    "@justinmchase/uffda": "jsr:@justinmchase/uffda@^0.9.1",
-    "@justinmchase/uffda/grammar": "jsr:@justinmchase/uffda@^0.9.1/grammar",
-    "@justinmchase/uffda/runtime": "jsr:@justinmchase/uffda@^0.9.1/runtime",
-    "@justinmchase/uffda/tokenizer": "jsr:@justinmchase/uffda@^0.9.1/tokenizer",
-    "@justinmchase/uffda/pattern": "jsr:@justinmchase/uffda@^0.9.1/pattern",
-    "@justinmchase/uffda/expression": "jsr:@justinmchase/uffda@^0.9.1/expression",
-    "@justinmchase/uffda/uffda": "jsr:@justinmchase/uffda@^0.9.1/uffda",
-    "@justinmchase/uffda/language-metadata": "jsr:@justinmchase/uffda@^0.9.1/language-metadata",
+    "@justinmchase/uffda": "jsr:@justinmchase/uffda@^0.9.2",
+    "@justinmchase/uffda/grammar": "jsr:@justinmchase/uffda@^0.9.2/grammar",
+    "@justinmchase/uffda/runtime": "jsr:@justinmchase/uffda@^0.9.2/runtime",
+    "@justinmchase/uffda/tokenizer": "jsr:@justinmchase/uffda@^0.9.2/tokenizer",
+    "@justinmchase/uffda/pattern": "jsr:@justinmchase/uffda@^0.9.2/pattern",
+    "@justinmchase/uffda/expression": "jsr:@justinmchase/uffda@^0.9.2/expression",
+    "@justinmchase/uffda/uffda": "jsr:@justinmchase/uffda@^0.9.2/uffda",
+    "@justinmchase/uffda/language-metadata": "jsr:@justinmchase/uffda@^0.9.2/language-metadata",
     "@std/assert": "jsr:@std/assert@^1.0.10",
     "@std/jsonc": "jsr:@std/jsonc@^1.0.2",
     "@std/path": "jsr:@std/path@^1.0.8"

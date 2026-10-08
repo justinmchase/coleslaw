@@ -121,11 +121,11 @@ Deno.test(
     const project = await findColeslawProject();
     assertEquals(
       project.imports.get("@justinmchase/uffda"),
-      "jsr:@justinmchase/uffda@^0.9.1",
+      "jsr:@justinmchase/uffda@^0.9.2",
     );
     assertEquals(
-      project.lockfile.version("jsr:@justinmchase/uffda@^0.9.1"),
-      "0.9.1",
+      project.lockfile.version("jsr:@justinmchase/uffda@^0.9.2"),
+      "0.9.2",
     );
     assertEquals(
       checkedArtifactPath("/workspace/src/app.clsw", {
@@ -164,7 +164,7 @@ export program Application {
       await Deno.writeTextFile(
         projectPath,
         JSON.stringify({
-          imports: { "@justinmchase/uffda": "jsr:@justinmchase/uffda@^0.9.1" },
+          imports: { "@justinmchase/uffda": "jsr:@justinmchase/uffda@^0.9.2" },
           outDir: "./build",
         }),
       );

@@ -10,16 +10,10 @@ supplies semantic checking, explicit composition, runtime adapters, and the
 
 Use Deno 2 and the released
 [Uffda CLI](https://github.com/justinmchase/uffda/releases/latest), version
-0.9.1 or later, installed on `PATH`. Coleslaw imports the public Uffda 0.9.1
+0.9.2 or later, installed on `PATH`. Coleslaw imports the public Uffda 0.9.2
 APIs and grammar components from JSR. Both local development and
 [CI](./.github/workflows/checks.yml) use released dependencies only; neither
 loads or builds a sibling Uffda checkout.
-
-Uffda 0.9.1 currently has a
-[published-package loading defect](https://github.com/justinmchase/uffda/issues/271):
-type checking and CLI grammar compilation work, but runtime grammar resolution
-fails when its built-in artifacts are loaded from JSR. The affected tests remain
-enabled; no local-source fallback is provided.
 
 ```sh
 uffda --version

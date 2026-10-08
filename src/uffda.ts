@@ -36,7 +36,7 @@ import type {
 } from "./syntax.ts";
 
 const PACKAGE = "@justinmchase/uffda";
-export const UFFDA_API_VERSION = "0.9.1";
+export const UFFDA_API_VERSION = "0.9.2";
 
 export type ApplicationSyntax = RawSyntaxModule;
 
