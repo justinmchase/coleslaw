@@ -1,8 +1,4 @@
-import {
-  assertEquals,
-  assertStringIncludes,
-  assertThrows,
-} from "jsr:@std/assert@^1.0.10";
+import { assertEquals, assertStringIncludes, assertThrows } from "@std/assert";
 import {
   type AggregateDefinition,
   CommandRuntime,

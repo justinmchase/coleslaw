@@ -1,0 +1,21 @@
+{
+  // Target Uffda 0.9.1; its Coleslaw API is not published yet, so development uses the sibling-checkout bridge.
+  "imports": {
+    "@justinmchase/uffda": "jsr:@justinmchase/uffda@^0.9.1",
+    "@justinmchase/uffda/grammar": "jsr:@justinmchase/uffda@^0.9.1/grammar",
+    "@justinmchase/uffda/runtime": "jsr:@justinmchase/uffda@^0.9.1/runtime",
+    "@justinmchase/uffda/tokenizer": "jsr:@justinmchase/uffda@^0.9.1/tokenizer",
+    "@justinmchase/uffda/pattern": "jsr:@justinmchase/uffda@^0.9.1/pattern",
+    "@justinmchase/uffda/expression": "jsr:@justinmchase/uffda@^0.9.1/expression",
+    "@justinmchase/uffda/uffda": "jsr:@justinmchase/uffda@^0.9.1/uffda",
+    "@justinmchase/uffda/language-metadata": "jsr:@justinmchase/uffda@^0.9.1/language-metadata",
+    "@std/assert": "jsr:@std/assert@^1.0.10",
+    "@std/jsonc": "jsr:@std/jsonc@^1.0.2",
+    "@std/path": "jsr:@std/path@^1.0.8"
+  },
+  "tasks": {
+    "check": "deno check --config deno.dev.jsonc cslw.ts src/*.ts",
+    "test": "COLESLAW_UFFDA_ROOT=../uffda deno test --config deno.dev.jsonc --allow-read --allow-write=bin,clsw.lock --allow-env=COLESLAW_UFFDA_ROOT,MODE,JOB_NAME,TOKEN --allow-net=127.0.0.1 test/",
+    "cli": "COLESLAW_UFFDA_ROOT=../uffda deno run --config deno.dev.jsonc --allow-read --allow-write --allow-env --allow-net cslw.ts"
+  }
+}

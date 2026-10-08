@@ -9,6 +9,7 @@ spec_ref:
   - ".agents/specifications/managers.spec.md#results"
   - ".agents/specifications/controllers.spec.md#routes"
   - ".agents/specifications/controllers.spec.md#binding-a-request"
+  - ".agents/specifications/controllers.spec.md#responses"
   - ".agents/specifications/controllers.spec.md#authentication"
 ---
 
@@ -34,7 +35,8 @@ Expected behavior:
   aggregate storage access or call effects. Failed command outcomes MUST retain
   any may-have-committed warning.
 - The controller MUST bind its manager input through declared expressions and
-  translate outcomes through declared responses, without host-written domain
+  translate outcomes using the specified default responses or supported declared
+  responses, without host-written domain
   logic or direct aggregate access.
 - The initial public-route subset MUST require explicit `public`; omitted
   authentication declarations and unsupported authentication MUST be refused

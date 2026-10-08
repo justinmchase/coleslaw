@@ -1,0 +1,5 @@
+#!/bin/sh
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd) || exit 1
+export COLESLAW_UFFDA_ROOT="${COLESLAW_UFFDA_ROOT:-"$script_dir/../uffda"}"
+exec deno run --config "$script_dir/deno.dev.jsonc" \
+  --allow-read --allow-write --allow-env --allow-net "$script_dir/cslw.ts" "$@"

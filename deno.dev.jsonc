@@ -1,0 +1,17 @@
+{
+  // Development-only bridge to Uffda API 0.9.1 in ../uffda; production uses deno.jsonc's JSR imports.
+  "extends": "./deno.jsonc",
+  "imports": {
+    "@justinmchase/uffda": "../uffda/mod.ts",
+    "@justinmchase/uffda/grammar": "../uffda/src/lang/grammar.ts",
+    "@justinmchase/uffda/runtime": "../uffda/src/runtime/public.ts",
+    "@justinmchase/uffda/tokenizer": "../uffda/src/lang/tokenizer/tokenizer.lang.ts",
+    "@justinmchase/uffda/pattern": "../uffda/src/lang/pattern/pattern.lang.ts",
+    "@justinmchase/uffda/expression": "../uffda/src/lang/expression/expression.lang.ts",
+    "@justinmchase/uffda/uffda": "../uffda/src/lang/uffda/uffda.lang.ts",
+    "@justinmchase/uffda/language-metadata": "../uffda/src/cli/language_metadata.ts",
+    "@std/assert": "jsr:@std/assert@^1.0.10",
+    "@std/jsonc": "jsr:@std/jsonc@^1.0.2",
+    "@std/path": "jsr:@std/path@^1.0.8"
+  }
+}

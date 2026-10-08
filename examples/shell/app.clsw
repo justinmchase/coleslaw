@@ -1,0 +1,23 @@
+import "./host.ts" ExampleJob;
+
+export config ShellSettings {
+  mode: ("job");
+  jobName: (string);
+}
+
+export mode BatchJob: Job {
+  jobs {
+    ExampleJob example;
+  }
+}
+
+export program ShellDemo {
+  config ShellSettings settings;
+  arguments {
+    0: settings.mode;
+    1: settings.jobName;
+  }
+  mode settings.mode {
+    "job" => BatchJob(settings.jobName);
+  }
+}

@@ -18,13 +18,15 @@ belong to that repository and should be coordinated as prerequisites.
   expressions, matching, diagnostics, and resolution through public JSR APIs.
   Add a thin Coleslaw semantic layer; do not fork or copy Uffda internals.
 - Preserve Uffda's import/export syntax, including explicit imported names.
-- Support built-in and explicitly imported mode kinds. In `mode PublicApi:
-  Web`, `Web` is a resolved descriptor, not a reserved grammar keyword.
+- Support built-in and explicitly imported mode kinds. In
+  `mode PublicApi:
+  Web`, `Web` is a resolved descriptor, not a reserved
+  grammar keyword.
 - Rename the existing API mode kind to Web. Keep its restrictions, including
   prohibiting full traversal through managers or in-process reactors.
-- Use explicit services, repositories, managers, and controllers composition.
-  No automatic dependency injection, constructor discovery, or ambient access
-  to every component through a context object.
+- Use explicit services, repositories, managers, and controllers composition. No
+  automatic dependency injection, constructor discovery, or ambient access to
+  every component through a context object.
 - Host implementations and mode adapters may be TypeScript. Domain behavior
   stays constrained Coleslaw; injection does not grant new domain capabilities.
 - Bind named config with nested settings, shapes, and the `secret` modifier.
@@ -81,9 +83,9 @@ the same name resolution as other dependencies.
 
 Repository bindings provide declared runtime storage or projection-read
 adapters. They do not let a manager load or write aggregate storage directly.
-Controller injection is limited to declared infrastructure capabilities, such
-as logging or authentication, and its ordinary managers/projections. Domain
-queries and effects keep their existing layer restrictions.
+Controller injection is limited to declared infrastructure capabilities, such as
+logging or authentication, and its ordinary managers/projections. Domain queries
+and effects keep their existing layer restrictions.
 
 The sketch's `Catalog.Manager` composition is illustrative, not permission to
 export a manager. The modules specification forbids exporting managers and
@@ -91,9 +93,9 @@ aggregates from a context. The checked domain slice must compose the exported
 controller's internal manager dependencies without exposing them across
 contexts; the implementation must reject boundary violations.
 
-An API label can select a Web mode containing controllers from several
-contexts. Those controllers reach multiple managers and aggregate kinds;
-one-aggregate atomicity remains a rule per command, not per mode.
+An API label can select a Web mode containing controllers from several contexts.
+Those controllers reach multiple managers and aggregate kinds; one-aggregate
+atomicity remains a rule per command, not per mode.
 
 ## Reference application findings
 
@@ -112,8 +114,8 @@ The composition reference is
   constructs controllers with specific dependencies and registers them in order.
 
 Borrow this explicit composition and registration order, not unrestricted
-repository writes, controller service calls, inheritance, or host-written
-domain logic.
+repository writes, controller service calls, inheritance, or host-written domain
+logic.
 
 ## Stages and dependencies
 
@@ -153,8 +155,8 @@ Add focused grammar/CLI/composition contracts as needed.
 Resolve:
 
 - Web naming across every existing API reference, without changing capabilities;
-- program selection labels, defaults, shaped mode parameters, and exactly-one-job
-  selection;
+- program selection labels, defaults, shaped mode parameters, and
+  exactly-one-job selection;
 - positional settings mapping, named-argument precedence, unknown/extra
   arguments, and secret-safe diagnostics;
 - staged config resolution: selector settings first, then selected-mode
@@ -169,9 +171,9 @@ Keep `cslw` as the requested executable name and retain the specified
 source/project/lock names `.clsw`, `clsw.jsonc`, and `clsw.lock` in this slice.
 Do not perform an unrelated project-format rename.
 
-Autonomous syntax decisions use explicit positional mappings and named
-mode parameters, with named flags above positionals above environment input.
-They must be recorded in the grammar contract and demonstrated by tests.
+Autonomous syntax decisions use explicit positional mappings and named mode
+parameters, with named flags above positionals above environment input. They
+must be recorded in the grammar contract and demonstrated by tests.
 
 ### 3. Requirements and tests for the foundation
 
@@ -182,8 +184,10 @@ implementation. Do not leave requirements with nonexistent placeholder tests.
 Test:
 
 - exact ASTs, source locations, complete-input parsing, and malformed syntax;
-- identical Uffda import syntax, explicit exports, missing names, and collisions;
-- config nesting, defaults, optional values, source precedence, secret redaction;
+- identical Uffda import syntax, explicit exports, missing names, and
+  collisions;
+- config nesting, defaults, optional values, source precedence, secret
+  redaction;
 - built-in/imported kinds, composition argument shapes, illegal layer access;
 - missing/multiple defaults, unmatched labels, and mode argument validation;
 - positional job name binding and exactly one executed job;
@@ -199,10 +203,10 @@ Use modular `.uff` grammar files for imports/exports, config, program, modes,
 and composition. Use TypeScript for AST types, semantic checking, artifact I/O,
 CLI orchestration, and host adapters.
 
-The pipeline is source -> syntax AST -> resolved, checked application IR ->
-mode selection -> reached config -> explicit construction -> execution.
-Parsing and checking must not execute imported factories or start components.
-Host modules must not construct resources at module-load time.
+The pipeline is source -> syntax AST -> resolved, checked application IR -> mode
+selection -> reached config -> explicit construction -> execution. Parsing and
+checking must not execute imported factories or start components. Host modules
+must not construct resources at module-load time.
 
 `parse` prints syntax; `check` validates semantics; `compile` writes checked
 artifacts; `run` executes only a selected, validated mode. Unsupported
@@ -214,22 +218,22 @@ Depends on stage 4 and the available upstream dependency.
 
 Provide a small example demonstrating config, a short mode label, explicit
 injection, an imported mode kind, job positional selection, startup, and
-shutdown. Use a test adapter where a domain engine is not implemented yet;
-label it honestly rather than claiming a complete Web or aggregate runtime.
+shutdown. Use a test adapter where a domain engine is not implemented yet; label
+it honestly rather than claiming a complete Web or aggregate runtime.
 
-Run targeted grammar/compiler/runtime tests, type-check, formatting/linting,
-the specs audit, CLI integration tests, and the example. Verify that one job
+Run targeted grammar/compiler/runtime tests, type-check, formatting/linting, the
+specs audit, CLI integration tests, and the example. Verify that one job
 executes, unused services are not constructed, and failed startup is reported.
 
 ### 6. Grow into a real domain application
 
 After the shell, add service/context declarations and a minimal working
-aggregate -> manager -> controller path. Add remaining declaration kinds
-through complete slices with requirement-citing tests, not generic opaque
-bodies accepted for every keyword.
+aggregate -> manager -> controller path. Add remaining declaration kinds through
+complete slices with requirement-citing tests, not generic opaque bodies
+accepted for every keyword.
 
-Defer workflows, timers, additional operational specifications, formatting,
-and production adapters until the foundation can express and run a real app.
+Defer workflows, timers, additional operational specifications, formatting, and
+production adapters until the foundation can express and run a real app.
 
 ## Review workflow
 
@@ -242,20 +246,30 @@ surfaces. The maintainer reviews and merges; do not merge automatically.
 The approved plan was merged in #16. Implementation continues in #17.
 
 - The public Uffda integration prerequisites are implemented in
-  [justinmchase/uffda#270](https://github.com/justinmchase/uffda/pull/270).
-  Its current integration commit is `b462bd56a977958105ea02cb917f1ba9a12f7daa`,
-  including the public expression evaluator. Focused upstream validation passed;
-  CI for this follow-up is pending. It is not merged or published.
-  Development and CI must use an
-  explicit mapping to this checkout until a compatible JSR release exists.
+  [justinmchase/uffda#270](https://github.com/justinmchase/uffda/pull/270). Its
+  current integration commit is `503ee800e610862d390fd1caaf85f7533214b780`,
+  including the public expression evaluator and runtime exports. Focused
+  upstream validation and CI passed. It is not merged or published. Development
+  and CI must use an explicit mapping to this checkout until a compatible JSR
+  release exists.
 - The application-shell specification and requirements are committed, including
   Web naming, settings selection, explicit composition, and host boundaries.
 - The initial pure aggregate kernel has 17 passing requirement-citing tests.
   These verify event-driven evolution, ordered transitions, atomic memory saves,
   bounded conflict retries, immutable identity, and uncertain-save warnings.
-- Grammar, CLI, composition, and runnable examples are being integrated. The
-  application deliverable is not complete until the real domain vertical slice
-  and final end-to-end validation described above pass.
+- Grammar, CLI, composition, and both runnable examples are implemented. The
+  current suite has 51 passing tests, with type checking, lint, formatting, and
+  the specification audit passing. A checked Counter artifact was started and
+  verified over HTTP: two increments yielded counts 2 and 5 with versions 1 and
+  2; the smoke-test process was stopped afterwards.
+- Follow-up validation fixed controller-wide routing and `Allow`, shaped path
+  routing, explicit imported config binding, private import scoping, genuine
+  stale-input detection, custom project output directories, launcher working
+  directories, and secret redaction during mode execution.
+- Named reusable shapes and arbitrary shaped mode parameters remain contract
+  gaps under active implementation. General service declarations remain outside
+  the current executable subset. Do not present the entire six-stage plan as
+  complete while these surfaces are missing.
 
 The memory store is a development adapter, not durable production storage or
 event delivery. Modeled errors, attached messages, projections, and production

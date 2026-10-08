@@ -1,0 +1,19 @@
+import "./host.ts" Probe;
+import "./shared.clsw" SharedSettings;
+
+export config Settings {
+  mode: ("job");
+}
+
+export mode ExampleJob: Job {
+  jobs {
+    Probe example;
+  }
+}
+
+export program MetadataCheck {
+  config Settings settings;
+  mode settings.mode {
+    "job" => ExampleJob;
+  }
+}
