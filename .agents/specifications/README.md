@@ -56,8 +56,8 @@ statements.
 - [Errors](./errors.spec.md): aggregate-owned error kinds and identified
   occurrences, explicit raising and resolution, retained state, and projections.
 - [Queries](./queries.spec.md): bounded reads, global and endpoint limits,
-  nested pages, declared filtering and sorting, live cursors, and traversal
-  capabilities of modes.
+  offset pages, nested results, declared filtering and sorting, cursor
+  iteration, and traversal capabilities of modes.
 
 ## Planned chapters
 

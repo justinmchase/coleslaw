@@ -192,7 +192,8 @@ response.
 - A route MUST NOT answer a result other than completed with a `2xx` status, and
   MUST NOT change the status of a conflicted or failed result.
 - A route reading a projection by key MUST respond `200` with the endpoint's
-  selected value, including page envelopes for selected collections, or `404`
+  selected value, including declared page or cursor-batch envelopes for
+  selected collections, or `404`
   when the projection holds no value for the key.
 - A route MAY declare a shape for its response body. A body that does not match
   it MUST end the request as failed, as an operation's result that does not
