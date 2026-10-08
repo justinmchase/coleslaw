@@ -1,6 +1,6 @@
 # Controllers
 
-This chapter defines controllers: the entry points of API mode, by which the
+This chapter defines controllers: the entry points of Web mode, by which the
 outside world invokes managers and reads projections over HTTP. It covers
 declaring a controller, the protocol it assumes, routes and binding a request to
 them, what a route does, the responses it gives, authentication, authorization,
@@ -24,8 +24,8 @@ capitals.
   [modules](./modules.spec.md#declaring-a-context)). A mode reaches it through
   its context, and only if the context exports it (see
   [modules](./modules.spec.md#the-boundary)).
-- A controller MUST be listed only by API modes. It MAY be listed by more than
-  one, such as a public API mode and an administrative one (see
+- A controller MUST be listed only by Web modes. It MAY be listed by more than
+  one, such as a public Web mode and an administrative one (see
   [modes](./modes.spec.md#declaring-modes)).
 
 ## What a controller may use
@@ -38,6 +38,10 @@ results back into responses. It holds no business logic of its own.
   service's operations, other than as an [authentication](#authentication) step
   the runtime performs for it.
 - A controller MAY read projections directly.
+- A controller MAY receive explicitly injected infrastructure adapters for
+  logging or authentication under
+  [composition](./application-shell.spec.md#explicit-composition). This MUST
+  NOT grant general service calls, effects, or direct aggregate mutation.
 - A controller MUST NOT read an aggregate's stored state. It reads what it needs
   from projections, as a manager does.
 - A controller MAY use only the managers of its own context, since a context
@@ -224,7 +228,7 @@ or step produced it.
   set. Paging, limits, sorting, and filtering follow the selected projection
   endpoint's [query contract](./queries.spec.md).
 - A route MUST NOT iterate over a whole collection while serving a request.
-- API mode's prohibition MUST also apply through managers and in-process
+- Web mode's prohibition MUST also apply through managers and in-process
   reactors. All reads for one request MUST share its
   [read-step budget](./queries.spec.md#mode-capability).
 
@@ -315,11 +319,11 @@ or removed.
 
 The server that accepts connections and speaks HTTP is not part of the program.
 
-- The server MUST be a service the runtime itself needs in API mode, as
+- The server MUST be a service the runtime itself needs in Web mode, as
   aggregate state storage is: never declared or called by the program, and
   implemented for a technology the config chooses (see
   [startup](./startup.spec.md#services)).
-- Coleslaw MUST provide an implementation of the server, so an API mode runs
+- Coleslaw MUST provide an implementation of the server, so a Web mode runs
   with no technology chosen.
 - What a server needs to listen, such as an address and a port, MUST be settings
   of its implementation, part of the config under the server's settings.
@@ -327,7 +331,7 @@ The server that accepts connections and speaks HTTP is not part of the program.
   delivers chosen requests directly, since the request is a source of variation
   at the program's edge (see the overview's
   [checkability](./overview.spec.md#checkability)).
-- When an API mode is stopped, the server MUST stop taking new requests (see
+- When a Web mode is stopped, the server MUST stop taking new requests (see
   [modes](./modes.spec.md#stopping)). A request abandoned before its operation's
   command is saved changed nothing.
 
@@ -347,7 +351,7 @@ The server that accepts connections and speaks HTTP is not part of the program.
   through a reactor.
 - **Mode-wide middleware.** Whether a mode may declare a pipeline for every
   controller it runs, such as tracing, rather than each controller listing it.
-- **Health and readiness.** How an API mode answers health and readiness checks,
+- **Health and readiness.** How a Web mode answers health and readiness checks,
   and whether they are routes, a server's concern, or an extension's.
 - **Static content.** Whether a controller may serve static files, such as a
   site's assets or a domain-verification file, or whether these belong outside
@@ -355,7 +359,7 @@ The server that accepts connections and speaks HTTP is not part of the program.
 - **Cross-origin requests.** How a controller declares which origins may call
   it, and whether that is a step, a setting, or an extension.
 - **Describing the API.** Whether the compiler should produce a description of
-  each API mode's routes and shapes, such as an OpenAPI document, from the
+  each Web mode's routes and shapes, such as an OpenAPI document, from the
   declarations.
 - **Authorization by stored state.** Whether an authorization rule may read a
   projection, so a route can refuse a principal before invoking an operation,

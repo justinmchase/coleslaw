@@ -33,8 +33,9 @@ managers and reactors call services.
   read the environment. A value that varies must arrive from the program's edges
   (see the overview's [checkability](./overview.spec.md#checkability)).
 - Uffda's native expressions, which run host code, MUST NOT be used. A program
-  contains no host code; host code lives only in the implementations of
-  services.
+  contains no host-written domain logic; host code lives in service
+  implementations and explicitly declared runtime/infrastructure adapters
+  (see [application shell](./application-shell.spec.md#host-boundary)).
 
 ## Scope
 

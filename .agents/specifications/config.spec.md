@@ -28,6 +28,10 @@ capitals.
 A process's input comes from two sources built into Coleslaw. When both supply a
 setting, the command line wins over the environment.
 
+Programs MAY additionally declare positional command-line bindings under
+[application shell](./application-shell.spec.md#settings-and-selection).
+Named flags take precedence over positionals; both precede the environment.
+
 - **Command line**: flags, such as `--database.url postgres://...`.
 - **Environment**: variables, such as `DATABASE__URL=postgres://...`.
 

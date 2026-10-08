@@ -7,6 +7,9 @@ statements.
 
 ## Chapters
 
+- [Application shell](./application-shell.spec.md): initial grammar, CLI,
+  settings-based selection, explicit composition, and typed host adapters.
+
 - [Overview](./overview.spec.md): what Coleslaw is for, its principles, its
   layers and what each may call, how a process starts, its modes, and how
   programs run.

@@ -19,11 +19,15 @@ process that runs it. Each process runs exactly one mode.
 - A program MUST declare one or more modes.
 - A mode declaration MUST have a kind and a name, unique among the program's
   modes, and MUST list the entry points it runs. For example, a program may
-  declare two API modes, a public one and an administrative one, each with its
+  declare two Web modes, a public one and an administrative one, each with its
   own controllers, so they deploy and scale separately.
 - A program MAY declare more than one mode of the same kind.
 - An entry point MAY appear in more than one mode.
-- Exactly one mode MUST be declared the default.
+- Without a program selection mapping, exactly one mode MUST be declared the
+  default. A program selection mapping MUST instead obtain any default label
+  from the selector setting's pattern, under
+  [application shell](./application-shell.spec.md#settings-and-selection);
+  it MUST NOT also select a competing mode-declaration default.
 
 ## Kinds
 
@@ -31,7 +35,7 @@ Coleslaw defines four kinds of mode. Each runs one kind of entry point.
 
 | Kind   | Runs                                                                 | Entry points |
 | ------ | -------------------------------------------------------------------- | ------------ |
-| API    | Serves requests until stopped                                        | Controllers  |
+| Web    | Serves requests until stopped                                        | Controllers  |
 | Worker | Handles messages from queues until stopped                           | Consumers    |
 | Job    | Runs the one job its input names, then exits with that job's outcome | Jobs         |
 | Events | Handles events from an event source until stopped                    | Reactors     |
@@ -52,21 +56,27 @@ Coleslaw defines four kinds of mode. Each runs one kind of entry point.
 
 ## Collection traversal
 
-- API mode MUST NOT support full collection traversal. Worker, Job, and Events
+- Web mode MUST NOT support full collection traversal. Worker, Job, and Events
   modes MUST support it under the per-read limits of
   [queries](./queries.spec.md#mode-capability).
 - This capability MUST be part of the mode kind's design, not config or an
   endpoint setting. An extension-defined kind MUST declare its capability.
 - Managers and in-process reactors MUST inherit the running mode's capability.
-  A reactor that needs full traversal MUST NOT run in process in API mode; it
+  A reactor that needs full traversal MUST NOT run in process in Web mode; it
   must run in a supporting mode such as Events.
 
 ## Selecting a mode
 
-- The built-in setting `mode` MUST select the mode a process runs, by its name
+- Without a program selection mapping, the built-in setting `mode` MUST select
+  the mode a process runs, by its name
   in kebab case (a mode named `PublicApi` is selected by `--mode public-api`, or
   `MODE=public-api` in the environment).
-- A process whose input selects no mode MUST run the default mode.
+- A process whose input selects no mode MUST run the default mode when one
+  exists. A mapping with no selector value or pattern default MUST fail startup.
+- A program MAY map short setting values to declared modes and shaped mode
+  arguments. Such a mapping MUST select exactly one mode and MUST fail on an
+  unmatched value (see
+  [application shell](./application-shell.spec.md#settings-and-selection)).
 - Input that names no declared mode MUST stop the process before anything is
   constructed, with a diagnostic listing the declared modes.
 - A job mode MUST also be given the name of the job to run, by the built-in

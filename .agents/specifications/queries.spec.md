@@ -99,14 +99,14 @@ iteration MUST NOT bypass outer or nested limits.
   Precedence MUST be applied per setting: built-in, program, config, endpoint.
   An omitted setting MUST inherit the preceding value, not reset the policy.
 - Caller-supplied page sizes MUST remain within the resulting endpoint limits.
-  Callers MUST NOT override maximums, depth, or the API read-step budget.
+  Callers MUST NOT override maximums, depth, or the Web read-step budget.
 - All effective sizes and read-step budgets MUST be finite positive integers;
   depth MUST be a finite nonnegative integer. Default page sizes MUST NOT
   exceed their respective maximums. Infinity or an unbounded alternative
   MUST NOT be accepted, even in a background mode.
 - Endpoint overrides MUST be declaration data, not expressions computed from
   individual requests. Changing numeric limits MUST NOT grant traversal.
-- The API read-step budget MUST be resolved once for the request using built-in,
+- The Web read-step budget MUST be resolved once for the request using built-in,
   program, and config policy. Endpoint overrides MUST NOT reset or increase
   that shared budget. Its built-in numeric default remains an open question;
   this chapter does not choose a count.
@@ -145,7 +145,7 @@ iteration MUST NOT bypass outer or nested limits.
 
 | Built-in mode kind | Full traversal |
 | --- | --- |
-| API | Forbidden |
+| Web    | Forbidden |
 | Worker | Permitted |
 | Job | Permitted |
 | Events | Permitted |
@@ -155,23 +155,23 @@ iteration MUST NOT bypass outer or nested limits.
   declaration performing the read.
 - An extension-defined mode kind MUST explicitly declare its traversal
   capability. An unspecified capability MUST NOT grant full traversal.
-- API mode MUST forbid full traversal throughout its reachable call paths,
+- Web mode MUST forbid full traversal throughout its reachable call paths,
   including manager operations and in-process reactors. A reactor needing
   full traversal MUST run in a supporting mode, such as Events, not in process
-  in API mode.
-- The compiler MUST reject an API mode reaching declared traversal or a loop
+  in Web mode.
+- The compiler MUST reject a Web mode reaching declared traversal or a loop
   that advances offsets or continuation cursors until exhaustion, naming the
   mode and offending call path. Shared declarations MAY be used in several supporting
-  modes; their capability MUST NOT follow them into API mode.
-- API requests MAY perform a fixed, bounded number of reads. Every projection
+  modes; their capability MUST NOT follow them into Web mode.
+- Web requests MAY perform a fixed, bounded number of reads. Every projection
   read and service query step MUST count against one shared request budget,
   including reads through managers, nested-page continuations, and synchronous
   in-process reactions. Invoking another manager MUST NOT reset the budget.
 - When the request budget is exhausted, the runtime MUST stop further read
   steps and fail the invocation explicitly. It MUST NOT return a partial scan
   as a successfully completed operation.
-- An in-process reaction running independently of a request in API mode MUST
-  also have a finite API read-step budget for its invocation and MUST NOT
+- An in-process reaction running independently of a request in Web mode MUST
+  also have a finite Web read-step budget for its invocation and MUST NOT
   perform full traversal. Asynchronous execution MUST NOT grant a background
   mode's capability.
 - A supporting mode MAY traverse all pages, directly where allowed or through
@@ -260,7 +260,7 @@ iteration MUST NOT bypass outer or nested limits.
   Fetching an unlimited provider result and slicing it in a manager MUST NOT
   satisfy a bounded read contract.
 - Computing a matched count through the read implementation MUST NOT itself
-  grant full traversal to program code in API mode. The implementation MAY
+  grant full traversal to program code in Web mode. The implementation MAY
   aggregate matches without returning them; managers and reactors MUST NOT
   drain pages to construct the count.
 - The runtime MUST validate returned item shapes, page sizes, selected nested
@@ -285,7 +285,7 @@ iteration MUST NOT bypass outer or nested limits.
   NOT enable a route to bypass them.
 - Runtime projection rebuilding MAY read every stored state through its own
   storage interface. It is maintenance work, not a program read endpoint, and
-  MUST NOT expose an unrestricted storage scan to API code.
+  MUST NOT expose an unrestricted storage scan to Web code.
 
 ### Examples of limits and composition
 
@@ -297,8 +297,8 @@ iteration MUST NOT bypass outer or nested limits.
 | Select a collection inside another nested collection under built-in policy | Refused: depth two exceeds one |
 | Program outer default 20, config default 15, endpoint default 8 | Use 8, inheriting other limits per setting |
 | Endpoint maximum 5 with inherited outer default 10 | Invalid effective policy; do not silently lower the default |
-| API route invokes successive managers to drain pages | Forbidden; changing caller does not change mode |
-| In-process reactor in API mode attempts a full scan | Forbidden even if invoked asynchronously |
+| Web route invokes successive managers to drain pages | Forbidden; changing caller does not change mode |
+| In-process reactor in Web mode attempts a full scan | Forbidden even if invoked asynchronously |
 | Worker manager traverses pages | Permitted; page and nested limits still apply |
 | Later page sees a newly inserted item before its cursor boundary | The item may be omitted; no snapshot guarantee |
 | 25 authorized matches, limit 10, offsets 0, 10, and 20 | Pages return 10, 10, and 5 items; each has `total: 25` and its offset/limit |
@@ -311,9 +311,9 @@ iteration MUST NOT bypass outer or nested limits.
 
 ## Why this design
 
-- **Mode, not caller.** The same manager can serve API requests and background
+- **Mode, not caller.** The same manager can serve Web requests and background
   work. A consumer or reactor label cannot justify an unlimited scan when that
-  work actually runs in API mode.
+  work actually runs in Web mode.
 - **Small defaults, explicit expansion.** Ten outer items and three nested
   items make ordinary reads small. Named endpoints expose only useful filtering
   and sorting, rather than turning every projection into a query engine.
@@ -339,7 +339,7 @@ iteration MUST NOT bypass outer or nested limits.
   Paging alone does not guarantee bounded database cost or payload bytes;
   offset-page matched counts may require substantial storage work even for
   small pages.
-- **API read-step count.** The built-in numeric default of the shared API
+- **Web read-step count.** The built-in numeric default of the shared Web
   budget remains undecided. A finite request-level bound is required; neither
   that number nor a deadline is inferred from the page size.
 - **Stable exports.** Snapshot reads, retention, and checkpoints for a stable

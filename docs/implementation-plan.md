@@ -159,9 +159,13 @@ Resolve:
 - built-in registration versus explicit imports and duplicate-name diagnostics;
 - artifact schema/versioning and the distinction between syntax and checked IR.
 
-Keep `cslw` as the requested executable name. Existing specifications spell
-source/project/lock names `.clsw`, `clsw.jsonc`, and `clsw.lock`; confirm whether
-to retain or consistently rename them before fixing the CLI contract.
+Keep `cslw` as the requested executable name and retain the specified
+source/project/lock names `.clsw`, `clsw.jsonc`, and `clsw.lock` in this slice.
+Do not perform an unrelated project-format rename.
+
+Autonomous syntax decisions use explicit positional mappings and named
+mode parameters, with named flags above positionals above environment input.
+They must be recorded in the grammar contract and demonstrated by tests.
 
 ### 3. Requirements and tests for the foundation
 

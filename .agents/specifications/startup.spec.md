@@ -17,7 +17,8 @@ capitals.
    extensions add (see [config](./config.spec.md#sources)).
 2. **Mode.** Select the mode from the input (see
    [modes](./modes.spec.md#selecting-a-mode)).
-3. **Reach.** Find what the mode reaches: its entry points, the managers they
+3. **Reach.** Bind the selected mode's explicit composition and find what it
+   reaches: its entry points, the managers they
    use, the reactors selected to run in process or events mode, the queues
    managers and reactors enqueue to or consumers handle, the external event
    sources reactors handle, and the services all of those use.
@@ -32,6 +33,9 @@ capitals.
   before any command is handled or any request served.
 - Startup MUST have no effects other than constructing services, such as opening
   connections.
+- Settings referenced by a program's selection mapping MUST be resolved before
+  selecting the mode; the remaining reached config is validated afterwards
+  (see [application shell](./application-shell.spec.md#settings-and-selection)).
 
 ## Services
 
@@ -42,8 +46,10 @@ which the implementor writes for particular technologies.
   module resolution. An implementation written in TypeScript is a module whose
   default export declares the implementation, with a host function for each of
   the service's operations.
-- Host code MUST appear only in service implementations (see
-  [expressions](./expressions.spec.md#purity)).
+- Host code MUST appear only in service implementations and the explicitly
+  defined runtime/infrastructure adapters of the
+  [application shell](./application-shell.spec.md#host-boundary), never domain
+  expressions or aggregate/manager business logic.
 - Domain modules, those declaring aggregates, projections, managers, and
   reactors, MUST refer only to service declarations, never to implementations,
   so the domain names no technology. Implementations MUST be imported only by
