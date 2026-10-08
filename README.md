@@ -148,9 +148,19 @@ Invalid shapes, undeclared body keys/query parameters, malformed JSON, and
 unsupported media types are refused. Unknown routes return 404; an unsupported
 method on a matching path returns 405 with `Allow`. Stop with Ctrl+C.
 
-Contexts expose controllers, not their aggregates or managers. Controller
-composition must preserve those boundaries; explicit injection does not
-authorize cross-context access or direct storage reads.
+Contexts declare named bindings and ordered dependencies explicitly. For
+example, `counter: Counter;`, `manager: CounterManager(counter);`, and
+`export http: CounterController(manager);` compose the counter path without
+ambient same-context access. A mode reaches the controller as
+`CounterContext.http`. Aliases may configure the same declaration more than
+once; aggregate capabilities remain identified by context and aggregate
+declaration, not by alias, and never expose aggregate storage.
+
+The command/handler input-and-metadata blocks, reusable Uffda `rule` patterns,
+maybe-by-default member access, and command-derived event projections are
+specified but are not all implemented by this executable slice. In particular,
+the current command syntax and event declaration/runtime model remain the
+earlier form; do not infer those newer semantics from this example.
 
 ## Scope and verification
 

@@ -2,6 +2,7 @@ export type BuiltInModeKind = "Web" | "Worker" | "Job" | "Events";
 export type ComponentCategory =
   | "service"
   | "repository"
+  | "aggregate"
   | "manager"
   | "controller"
   | "job"
@@ -13,6 +14,7 @@ export type ComponentCategory =
 export interface HostValueType {
   readonly kind: "string" | "number" | "boolean" | "object" | "component";
   readonly category?: ComponentCategory;
+  readonly identity?: string;
 }
 
 export interface HostParameter {
@@ -32,6 +34,7 @@ export interface ModeRunOptions {
 
 export interface HostComponentDescriptor<T = unknown> {
   readonly kind: ComponentCategory;
+  readonly identity?: string;
   readonly parameters: readonly HostParameter[];
   create(arguments_: readonly unknown[]):
     | ComponentResource<T>
@@ -108,6 +111,7 @@ const MODE_SECTIONS: Readonly<
 const COMPONENT_CATEGORIES = new Set<ComponentCategory>([
   "service",
   "repository",
+  "aggregate",
   "manager",
   "controller",
   "job",
@@ -138,6 +142,12 @@ export function isHostComponentDescriptor(
   ) {
     return false;
   }
+  if (
+    candidate.identity !== undefined &&
+    typeof candidate.identity !== "string"
+  ) {
+    return false;
+  }
   const parameterNames = new Set<string>();
   for (const parameter of candidate.parameters) {
     if (
@@ -157,8 +167,16 @@ export function isHostComponentDescriptor(
       return false;
     }
     if (
+      parameter.type.kind === "component" &&
+      parameter.type.identity !== undefined &&
+      typeof parameter.type.identity !== "string"
+    ) {
+      return false;
+    }
+    if (
       parameter.type.kind !== "component" &&
-      parameter.type.category !== undefined
+      (parameter.type.category !== undefined ||
+        parameter.type.identity !== undefined)
     ) {
       return false;
     }
@@ -354,7 +372,9 @@ export function checkComposition(
           });
         } else if (
           expected.kind !== "component" ||
-          !acceptsComponent(dependency.category, expected.category)
+          !acceptsComponent(dependency.category, expected.category) ||
+          (expected.identity !== undefined &&
+            dependency.descriptor.identity !== expected.identity)
         ) {
           problems.push({
             code: "INVALID_ARGUMENT_TYPE",

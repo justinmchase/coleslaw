@@ -24,6 +24,7 @@ import type {
   RawConfigDeclaration,
   RawConfigMember,
   RawControllerDeclaration,
+  RawDomainParameter,
   RawManagerDeclaration,
   RawModeDeclaration,
   RawModeSelection,
@@ -110,6 +111,15 @@ interface ParsedAggregateDeclaration extends
   readonly commands: readonly Omit<RawAggregateShape, "span">[];
   readonly events: readonly Omit<RawAggregateShape, "span">[];
   readonly states: readonly ParsedAggregateState[];
+}
+
+function domainParameters(
+  parameters: readonly RawDomainParameter[],
+  spans: SpanCatalog,
+): readonly RawDomainParameter[] {
+  return parameters.map((parameter) => ({
+    ...withSpan(parameter, spans, "DomainParameter"),
+  }));
 }
 
 function collectSpans(
@@ -309,6 +319,7 @@ function managerDeclaration(
 ): RawManagerDeclaration & { readonly span: SourceSpan } {
   return {
     ...withSpan(value, spans, "ManagerDeclaration"),
+    parameters: domainParameters(value.parameters ?? [], spans),
     operations: value.operations.map((operation) => ({
       ...withSpan(operation, spans, "ManagerOperation"),
     })),
@@ -321,6 +332,7 @@ function controllerDeclaration(
 ): RawControllerDeclaration & { readonly span: SourceSpan } {
   return {
     ...withSpan(value, spans, "ControllerDeclaration"),
+    parameters: domainParameters(value.parameters ?? [], spans),
     routes: value.routes.map((route) => ({
       ...withSpan(route, spans, "ControllerRoute"),
       operation: withSpan(route.operation, spans, "DomainNamePath"),
@@ -379,6 +391,7 @@ function syntaxWithSpans(
           ...withSpan(declaration, spans, "ContextDeclaration"),
           members: declaration.members.map((member) => ({
             ...withSpan(member, spans, "ContextMember"),
+            arguments: member.arguments ?? [],
           })),
         });
         break;

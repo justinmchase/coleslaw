@@ -271,7 +271,15 @@ export interface RawContextDeclaration {
 
 export interface RawContextMember {
   readonly name: string;
+  readonly declaration: string;
+  readonly arguments: readonly string[];
   readonly exported: boolean;
+  readonly span: SourceSpan;
+}
+
+export interface RawDomainParameter {
+  readonly name: string;
+  readonly type: string;
   readonly span: SourceSpan;
 }
 
@@ -344,7 +352,7 @@ export interface RawManagerOperation {
   readonly name: string;
   readonly input: UffdaPatternNode;
   readonly result: UffdaPatternNode;
-  readonly aggregate: string;
+  readonly aggregateParameter: string;
   readonly command: string;
   readonly identity: UffdaExpressionNode;
   readonly payload: UffdaExpressionNode;
@@ -354,6 +362,7 @@ export interface RawManagerOperation {
 export interface RawManagerDeclaration {
   readonly kind: "manager";
   readonly name: string;
+  readonly parameters: readonly RawDomainParameter[];
   readonly operations: readonly RawManagerOperation[];
   readonly span: SourceSpan;
 }
@@ -375,6 +384,7 @@ export interface RawControllerRoute {
 export interface RawControllerDeclaration {
   readonly kind: "controller";
   readonly name: string;
+  readonly parameters: readonly RawDomainParameter[];
   readonly routes: readonly RawControllerRoute[];
   readonly span: SourceSpan;
 }

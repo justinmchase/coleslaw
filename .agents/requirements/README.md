@@ -17,3 +17,4 @@ verify it cite it with `req:{id}`.
 - [Host descriptors](./application-shell/008-host.requirement.md)
 - [Aggregate kernel](./application-shell/009-domain-kernel.requirement.md)
 - [Domain-to-HTTP slice](./application-shell/010-domain-http.requirement.md)
+- [Explicit context composition](./application-shell/011-explicit-context-composition.requirement.md)

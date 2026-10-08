@@ -9,13 +9,56 @@ export ManagerDeclaration;
 export ExportedManager;
 export ControllerDeclaration;
 export ExportedController;
+export DomainParameter;
 
 rule DomainIdentifier = string;
 
+rule DomainParameter =
+  n:DomainIdentifier
+  ":"
+  t:DomainIdentifier
+  -> { name: n, type: t }
+;
+
+rule AdditionalDomainParameter =
+  p:DomainParameter
+  -> p
+;
+
+rule DomainParameters =
+  "("
+  p:DomainParameter
+  r:AdditionalDomainParameter*
+  ")"
+  -> (flat [p r])
+;
+
+rule ContextArgument =
+  not ")"
+  a:DomainIdentifier
+  -> a
+;
+
+rule ContextArguments =
+  "("
+  a:ContextArgument*
+  ")"
+  -> a
+;
+
 rule ContextMember =
   e:("export" -> true)?
-  n:DomainIdentifier ";"
-  -> { name: n, exported: (coalesce e false) }
+  n:DomainIdentifier
+  ":"
+  d:DomainIdentifier
+  a:ContextArguments?
+  ";"
+  -> {
+    name: n,
+    declaration: d,
+    arguments: (coalesce a []),
+    exported: (coalesce e false)
+  }
 ;
 
 rule ContextDeclaration =
@@ -227,7 +270,7 @@ rule ManagerOperation =
     name: n,
     input: i,
     result: r,
-    aggregate: a,
+    aggregateParameter: a,
     command: c,
     identity: identity,
     payload: payload
@@ -237,10 +280,11 @@ rule ManagerOperation =
 rule ManagerDeclaration =
   "manager"
   n:DomainIdentifier
+  p:DomainParameters?
   "{"
   o:ManagerOperation*
   "}"
-  -> { kind: "manager", name: n, operations: o }
+  -> { kind: "manager", name: n, parameters: (coalesce p []), operations: o }
 ;
 
 rule ExportedManager =
@@ -279,10 +323,11 @@ rule ControllerRoute =
 rule ControllerDeclaration =
   "controller"
   n:DomainIdentifier
+  p:DomainParameters?
   "{"
   r:ControllerRoute*
   "}"
-  -> { kind: "controller", name: n, routes: r }
+  -> { kind: "controller", name: n, parameters: (coalesce p []), routes: r }
 ;
 
 rule ExportedController =

@@ -58,13 +58,18 @@ aggregates.
 ### Declaring a context
 
 - A context MUST be declared with `context` and a name, and a body listing its
-  members, such as `export context Catalog { ... }`.
-- A member MUST be a declaration written in the body or the name of one the
-  module imports, so a context MAY gather declarations from any modules,
-  wherever they are.
+  named bindings, such as `export context Catalog { ... }`.
+- A binding MUST name a local alias and a declaration, such as
+  `manager: CatalogManager(products);`. Its ordered arguments name other
+  bindings in the same context and MUST match the declaration's explicit
+  dependency parameters. The binding's target and dependencies MAY be declared
+  before or after the context body.
+- A context MAY bind the same declaration more than once under distinct aliases;
+  each alias is a separate configured composition instance.
 - A member MUST be an aggregate, a projection, a manager, a reactor, a
   controller, a consumer, a queue, or a job. These are owned: each MUST be a
-  member of at most one context in a program.
+  member of at most one context in a program. Multiple aliases in the same
+  context do not create multiple owners.
 - Shapes, funcs, and service declarations hold no state and are not owned.
   Contexts MAY use them freely, and a body MAY list them so that the context can
   export them.
@@ -74,9 +79,9 @@ aggregates.
 
 ### What a context exports
 
-- A member listed with `export` in the body is exported by the context, such as
-  `export ProductListing;`, and an event is exported by its aggregate and name,
-  such as `export Product.ProductDiscontinued;`.
+- A binding listed with `export` in the body is exported by the context, such as
+  `export listing: ProductListing();`, and an event is exported by its aggregate
+  and name, such as `export Product.ProductDiscontinued;`.
 - A context MAY export events, projections, shapes, and funcs, which other
   contexts use, and controllers, consumers, jobs, and reactors, which modes run.
 - An exported projection MUST expose reads only through its declared
@@ -90,15 +95,24 @@ aggregates.
 
 ### The boundary
 
-- A member of a context MAY use any other member of the same context, and
-  anything not owned.
+- A declaration MUST use an owned declaration only through an explicitly
+  declared dependency parameter bound to a context binding. Context membership,
+  same-context ownership, or importing a declaration MUST NOT grant ambient
+  access.
+- Aggregate dependency parameters MUST name the aggregate declaration whose
+  command capability they accept. The capability MUST identify the aggregate by
+  its context and declaration, not by the alias used to bind it, and MUST NOT
+  expose a loaded aggregate instance or raw storage.
+- A controller MUST invoke managers only through explicit manager parameters;
+  routes MUST name the parameter and operation. A manager MUST send commands
+  only through an explicit aggregate parameter.
 - A declaration MUST use an owned declaration of another context, or an event of
   one of its aggregates, only through that context and only if that context
   exports it, such as `Catalog.ProductDiscontinued` after importing `Catalog`.
   Using it any other way, such as by importing it from the module that declares
   it, MUST be a compile error naming both contexts and the declaration.
-- A mode MUST reach the entry points and reactors of a context through that
-  context, such as `Catalog.CatalogApi`.
+- A mode MUST reach the entry points and reactors of a context through an
+  exported context binding, such as `Catalog.api`.
 - Owned declarations that are a member of no context belong to the program's
   default context, which has no name and exports nothing to other contexts. A
   program that declares no contexts is entirely in its default context, so a

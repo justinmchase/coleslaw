@@ -5,11 +5,12 @@ import {
   modeComposition,
 } from "../src/application.ts";
 import { checkComposition, startComposition } from "../src/composition.ts";
-import { MemoryStateStore } from "../src/domain.ts";
+import { MemoryStateStore, type StateStore } from "../src/domain.ts";
 import {
   createDeclarativeHostComponents,
   validateDeclarativeDomain,
 } from "../src/domain-runtime.ts";
+import { resolveApplicationImports } from "../src/imports.ts";
 import { parseApplicationSource } from "../src/uffda.ts";
 
 async function assertProblem(
@@ -27,6 +28,234 @@ async function assertProblem(
   assertEquals(body.type, "about:blank");
   return body;
 }
+
+Deno.test(
+  "req:application-shell-011 imported domain declarations are explicitly unsupported context bindings",
+  async () => {
+    const folder = `bin/context-import-${crypto.randomUUID()}`;
+    const importedPath = `${folder}/counter.clsw`;
+    const sourcePath = `${folder}/app.clsw`;
+    const importedSource = `
+export aggregate ImportedCounter {
+  identity id: (string) = "";
+  field count: (number) = 0;
+  command Increment: ({ id: string });
+  event Incremented: ({ id: string });
+  start state Ready {
+    command Increment { emit Incremented: input; }
+    event Incremented { set id = input.id; }
+  }
+}
+`;
+    const source = `
+import "./counter.clsw" ImportedCounter;
+context LocalContext {
+  counter: ImportedCounter;
+}
+`;
+    try {
+      await Deno.mkdir(folder, { recursive: true });
+      await Deno.writeTextFile(importedPath, importedSource);
+      await Deno.writeTextFile(sourcePath, source);
+      const parsed = await parseApplicationSource(source, sourcePath);
+      assert(parsed.ok, parsed.ok ? "" : parsed.failure.message);
+      const imports = await resolveApplicationImports(
+        parsed.syntax,
+        sourcePath,
+      );
+      assert(imports.ok, imports.ok ? "" : imports.diagnostics[0]?.message);
+
+      const diagnostics = validateDeclarativeDomain(
+        parsed.syntax,
+        new Map(),
+        imports.resolved.declarations,
+      );
+      assert(
+        diagnostics.some((problem) =>
+          problem.code === "UNSUPPORTED_IMPORTED_CONTEXT_BINDING"
+        ),
+        "an imported aggregate used as a context binding must fail explicitly",
+      );
+      assertEquals(
+        diagnostics.some((problem) =>
+          problem.code === "UNKNOWN_CONTEXT_MEMBER"
+        ),
+        false,
+        "imported domain declarations must not be reported as merely unknown",
+      );
+    } finally {
+      await Deno.remove(folder, { recursive: true });
+    }
+  },
+);
+
+Deno.test(
+  "req:application-shell-011 explicit context bindings support aliases without changing aggregate identity",
+  async () => {
+    const source = await Deno.readTextFile("examples/domain/counter.clsw");
+    const aliases = source
+      .replace(
+        "manager: CounterManager(counter);",
+        `manager: CounterManager(counter);
+  secondaryCounter: Counter;
+  secondaryManager: CounterManager(secondaryCounter);`,
+      )
+      .replace(
+        "export http: CounterController(manager);",
+        `export http: CounterController(manager);
+  export secondaryHttp: CounterController(secondaryManager);`,
+      );
+    const parsed = await parseApplicationSource(
+      aliases,
+      "context-aliases.clsw",
+    );
+    assert(parsed.ok, parsed.ok ? "" : parsed.failure.message);
+    assertEquals(validateDeclarativeDomain(parsed.syntax), []);
+
+    const baseStore = new MemoryStateStore();
+    const aggregateKinds: string[] = [];
+    const stateStore: StateStore = {
+      async load(kind, identity) {
+        aggregateKinds.push(kind);
+        return await baseStore.load(kind, identity);
+      },
+      save: baseStore.save.bind(baseStore),
+    };
+    const descriptors = createDeclarativeHostComponents(parsed.syntax, {
+      stateStore,
+    });
+    const invoke = async (name: string, by: number) => {
+      const descriptor = descriptors.get(name);
+      assert(descriptor);
+      const resource = await descriptor.create([]);
+      const controller = resource.value as {
+        handle(request: Request): Promise<Response>;
+      };
+      try {
+        return await controller.handle(
+          new Request("http://localhost/counters/c-1", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ by }),
+          }),
+        );
+      } finally {
+        await resource.dispose?.();
+      }
+    };
+
+    const first = await invoke("CounterContext.http", 2);
+    assertEquals(first.status, 200);
+    assertEquals((await first.json()).version, 1);
+    const second = await invoke("CounterContext.secondaryHttp", 3);
+    assertEquals(second.status, 200);
+    assertEquals((await second.json()).version, 2);
+    assertEquals(new Set(aggregateKinds), new Set(["CounterContext.Counter"]));
+    assertEquals(
+      (await baseStore.load("CounterContext.Counter", "c-1"))
+        ?.machine.fields.count,
+      5,
+    );
+  },
+);
+
+Deno.test(
+  "req:application-shell-011 invalid or ambient context dependencies fail without storage access",
+  async () => {
+    const source = await Deno.readTextFile("examples/domain/counter.clsw");
+    const candidates = [
+      {
+        source: source.replace(
+          "CounterManager(counter)",
+          "CounterManager(missing)",
+        ),
+        codes: ["UNKNOWN_CONTEXT_BINDING"],
+      },
+      {
+        source: source.replace(
+          "CounterManager(counter)",
+          "CounterManager(counter counter)",
+        ),
+        codes: ["INVALID_CONTEXT_ARGUMENT_COUNT"],
+      },
+      {
+        source: source.replace(
+          "CounterManager(counter)",
+          "CounterManager",
+        ),
+        codes: ["INVALID_CONTEXT_ARGUMENT_COUNT"],
+      },
+      {
+        source: source.replace(
+          "  counter: Counter;\n",
+          "  counter: Counter;\n  counter: Counter;\n",
+        ),
+        codes: ["DUPLICATE_DOMAIN_MEMBER"],
+      },
+      {
+        source: source.replace(
+          "CounterManager(counter: Counter)",
+          "CounterManager(counter: Counter counter: Counter)",
+        ),
+        codes: ["DUPLICATE_DOMAIN_MEMBER"],
+      },
+      {
+        source: source.replace(
+          "send counter.Increment",
+          "send Counter.Increment",
+        ),
+        codes: ["UNKNOWN_MANAGER_AGGREGATE"],
+      },
+      {
+        source: source.replace(
+          "operation manager.Increment",
+          "operation CounterManager.Increment",
+        ),
+        codes: ["UNKNOWN_CONTROLLER_OPERATION"],
+      },
+      {
+        source: source.replace(
+          "CounterManager(counter)",
+          "CounterManager(http)",
+        ),
+        codes: [
+          "INVALID_CONTEXT_ARGUMENT_TYPE",
+          "CONTEXT_DEPENDENCY_CYCLE",
+        ],
+      },
+    ];
+    const baseStore = new MemoryStateStore();
+    let storeCalls = 0;
+    const stateStore: StateStore = {
+      load: async (...arguments_) => {
+        storeCalls++;
+        return await baseStore.load(...arguments_);
+      },
+      save: async (...arguments_) => {
+        storeCalls++;
+        return await baseStore.save(...arguments_);
+      },
+    };
+    for (const [index, candidate] of candidates.entries()) {
+      const parsed = await parseApplicationSource(
+        candidate.source,
+        `invalid-context-${index}.clsw`,
+      );
+      assert(parsed.ok, parsed.ok ? "" : parsed.failure.message);
+      const diagnostics = validateDeclarativeDomain(parsed.syntax);
+      for (const code of candidate.codes) {
+        assert(
+          diagnostics.some((problem) => problem.code === code),
+          `expected ${code}, got ${
+            diagnostics.map((problem) => problem.code).join(", ")
+          }`,
+        );
+      }
+      createDeclarativeHostComponents(parsed.syntax, { stateStore });
+    }
+    assertEquals(storeCalls, 0);
+  },
+);
 
 Deno.test(
   "req:application-shell-010 declarative command runs through a loopback HTTP listener",
@@ -211,8 +440,8 @@ Deno.test(
     const source = await Deno.readTextFile("examples/domain/counter.clsw");
     const routedSource = source
       .replace(
-        "export CounterController;",
-        "export CounterController;\n  export ReadController;",
+        "export http: CounterController(manager);",
+        "export http: CounterController(manager);\n  export read: ReadController(manager);",
       )
       .replace(
         "path: ({ id: string });",
@@ -221,9 +450,9 @@ Deno.test(
       .replace(
         "\nexport config CounterSettings",
         `
-controller ReadController {
+controller ReadController(manager: CounterManager) {
   route GET "/counters/{id}" public {
-    operation IncrementCounter.Increment;
+    operation manager.Increment;
     path: ({ id: "read" });
     input: { id: request.path.id, by: 0 };
   }
@@ -232,9 +461,9 @@ controller ReadController {
 export config CounterSettings`,
       )
       .replace(
-        "CounterContext.CounterController http;",
-        `CounterContext.CounterController http;
-    CounterContext.ReadController reader;`,
+        "CounterContext.http http;",
+        `CounterContext.http http;
+    CounterContext.read reader;`,
       );
     const parsed = await parseApplicationSource(
       routedSource,
@@ -369,8 +598,8 @@ Deno.test(
 
     const privateExport = await parseApplicationSource(
       source.replace(
-        "manager IncrementCounter",
-        "export manager IncrementCounter",
+        "manager CounterManager",
+        "export manager CounterManager",
       ),
       "private-export.clsw",
     );
@@ -407,7 +636,7 @@ Deno.test(
 
     const directController = await parseApplicationSource(
       source.replace(
-        "CounterContext.CounterController http;",
+        "CounterContext.http http;",
         "CounterController http;",
       ),
       "direct-controller.clsw",
@@ -428,7 +657,7 @@ Deno.test(
     const directManager = await parseApplicationSource(
       source.replace(
         "export mode CounterApi: Web {",
-        "export mode CounterApi: Web {\n  managers { IncrementCounter commands; }",
+        "export mode CounterApi: Web {\n  managers { CounterManager commands; }",
       ),
       "direct-manager.clsw",
     );
@@ -448,8 +677,8 @@ Deno.test(
     const crossContext = await parseApplicationSource(
       source.replace(
         "export context CounterContext {",
-        "context OtherContext { Counter; }\nexport context CounterContext {",
-      ).replace("  Counter;\n", ""),
+        "context OtherContext { counter: Counter; }\nexport context CounterContext {",
+      ).replace("  counter: Counter;\n", ""),
       "cross-context.clsw",
     );
     assert(
@@ -482,9 +711,9 @@ Deno.test(
 
     const secondContext = `
 export context OtherContext {
-  OtherCounter;
-  OtherManager;
-  export OtherController;
+  otherCounter: OtherCounter;
+  otherManager: OtherManager(otherCounter);
+  export otherHttp: OtherController(otherManager);
 }
 aggregate OtherCounter {
   identity id: (string) = "";
@@ -501,19 +730,19 @@ aggregate OtherCounter {
     }
   }
 }
-manager OtherManager {
+manager OtherManager(otherCounter: OtherCounter) {
   operation Increment {
     input: ({ id: string, by: number });
     result: (any);
-    send OtherCounter.Increment {
+    send otherCounter.Increment {
       identity: input.id;
       payload: input;
     }
   }
 }
-controller OtherController {
+controller OtherController(otherManager: OtherManager) {
   route POST "/others/{id}" public {
-    operation OtherManager.Increment;
+    operation otherManager.Increment;
     path: ({ id: string });
     body: ({ by: number });
     input: { id: request.path.id, by: request.body.by };
@@ -522,10 +751,10 @@ controller OtherController {
 `;
     const multiContext = await parseApplicationSource(
       source.replace(
-        "  controllers {\n    CounterContext.CounterController http;\n  }",
+        "  controllers {\n    CounterContext.http http;\n  }",
         `  controllers {
-    CounterContext.CounterController http;
-    OtherContext.OtherController otherHttp;
+    CounterContext.http http;
+    OtherContext.otherHttp otherHttp;
   }`,
       ) + secondContext,
       "multi-context.clsw",
@@ -556,30 +785,23 @@ Deno.test(
     );
     assert(parsed.ok, parsed.ok ? "" : parsed.failure.message);
     const descriptors = createDeclarativeHostComponents(parsed.syntax);
-    const managerDescriptor = descriptors.get("IncrementCounter");
-    assert(managerDescriptor);
-    const resource = await managerDescriptor.create([]);
-    const manager = resource.value as {
-      invoke(operation: string, input: unknown): Promise<{
-        kind: string;
-        version?: number;
-      }>;
+    const controllerDescriptor = descriptors.get("CounterContext.http");
+    assert(controllerDescriptor);
+    const resource = await controllerDescriptor.create([]);
+    const controller = resource.value as {
+      handle(request: Request): Promise<Response>;
     };
-
-    assertEquals(
-      (await manager.invoke("Increment", {
-        id: "strict-shape",
-        by: 2,
-        unexpected: true,
-      })).kind,
-      "refused",
+    const response = await controller.handle(
+      new Request("http://localhost/counters/strict-shape", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          by: 2,
+          unexpected: true,
+        }),
+      }),
     );
-    const accepted = await manager.invoke("Increment", {
-      id: "strict-shape",
-      by: 2,
-    });
-    assertEquals(accepted.kind, "accepted");
-    assertEquals(accepted.version, 1);
+    assertEquals(response.status, 400);
     await resource.dispose?.();
   },
 );

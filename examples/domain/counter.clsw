@@ -1,8 +1,8 @@
 # Counter state is process-local and non-durable; recorded events are not delivered.
 export context CounterContext {
-  Counter;
-  IncrementCounter;
-  export CounterController;
+  counter: Counter;
+  manager: CounterManager(counter);
+  export http: CounterController(manager);
 }
 
 aggregate Counter {
@@ -27,7 +27,7 @@ aggregate Counter {
   }
 }
 
-manager IncrementCounter {
+manager CounterManager(counter: Counter) {
   operation Increment {
     input: ({ id: string, by: number });
     result: (
@@ -36,16 +36,16 @@ manager IncrementCounter {
       | { kind: "conflicted" }
       | { kind: "failed", error: string, mayHaveCommitted: boolean }
     );
-    send Counter.Increment {
+    send counter.Increment {
       identity: input.id;
       payload: input;
     }
   }
 }
 
-controller CounterController {
+controller CounterController(manager: CounterManager) {
   route POST "/counters/{id}" public {
-    operation IncrementCounter.Increment;
+    operation manager.Increment;
     path: ({ id: string });
     body: ({ by: number });
     input: { id: request.path.id, by: request.body.by };
@@ -58,7 +58,7 @@ export config CounterSettings {
 
 export mode CounterApi: Web {
   controllers {
-    CounterContext.CounterController http;
+    CounterContext.http http;
   }
 }
 

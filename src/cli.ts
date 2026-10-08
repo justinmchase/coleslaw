@@ -175,7 +175,11 @@ async function loadValidated(
     ...parsed.syntax.declarations,
     ...imports.resolved.declarations.values(),
   ]);
-  const domainDiagnostics = validateDeclarativeDomain(parsed.syntax, shapes);
+  const domainDiagnostics = validateDeclarativeDomain(
+    parsed.syntax,
+    shapes,
+    imports.resolved.declarations,
+  );
   if (domainDiagnostics.length > 0) {
     for (const diagnostic of domainDiagnostics) {
       printDiagnostic(diagnostic);

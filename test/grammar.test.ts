@@ -193,16 +193,18 @@ Deno.test(
   "req:application-shell-009 parses a context-owned event-evolving aggregate",
   async () => {
     const result = await parseApplicationSource(
-      `context CounterContext {
-  Counter;
-  CounterManager;
-        export CounterController;
+      `export context CounterContext {
+  counter: Counter;
+  manager: CounterManager(counter);
+  export http: CounterController(manager);
 }
+
+shape IncrementInput = ({ id: string, by: number });
 
 aggregate Counter {
   identity id: (string) = null;
   field count: (number) = 0;
-  command Increment: ({ id: string, by: number });
+  command Increment: (IncrementInput);
   event Incremented: ({ id: string, by: number });
   start state Ready {
     command Increment {
@@ -215,20 +217,20 @@ aggregate Counter {
   }
 }
 
-manager CounterManager {
+manager CounterManager(counter: Counter) {
   operation Increment {
-    input: ({ id: string, by: number });
+    input: (IncrementInput);
     result: (any);
-    send Counter.Increment {
+    send counter.Increment {
       identity: input.id;
       payload: input;
     }
   }
 }
 
-controller CounterController {
+controller CounterController(manager: CounterManager) {
   route POST "/counters/{id}" public {
-    operation CounterManager.Increment;
+    operation manager.Increment;
     path: ({ id: string });
     body: ({ by: number });
     input: { id: request.path.id, by: request.body.by };
@@ -242,14 +244,19 @@ controller CounterController {
     );
     assert(context?.kind === "context");
     assertEquals(context.members.map((member) => member.name), [
-      "Counter",
-      "CounterManager",
-      "CounterController",
+      "counter",
+      "manager",
+      "http",
     ]);
     assertEquals(context.members.map((member) => member.exported), [
       false,
       false,
       true,
+    ]);
+    assertEquals(context.members.map((member) => member.declaration), [
+      "Counter",
+      "CounterManager",
+      "CounterController",
     ]);
     const aggregate = result.syntax.declarations.find((declaration) =>
       declaration.kind === "aggregate"
@@ -271,7 +278,8 @@ controller CounterController {
     );
     assert(manager?.kind === "manager");
     assertEquals(manager.operations[0].name, "Increment");
-    assertEquals(manager.operations[0].aggregate, "Counter");
+    assertEquals(manager.parameters[0].name, "counter");
+    assertEquals(manager.operations[0].aggregateParameter, "counter");
     const controller = result.syntax.declarations.find((declaration) =>
       declaration.kind === "controller"
     );
@@ -284,7 +292,7 @@ controller CounterController {
       ["path", "body"],
     );
     assertEquals(controller.routes[0].operation.segments, [
-      "CounterManager",
+      "manager",
       "Increment",
     ]);
     assert(aggregate.fields[0].span.start.offset > 0);

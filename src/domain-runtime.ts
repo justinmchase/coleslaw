@@ -17,12 +17,16 @@ import {
   type PatternExpressionRuntime,
   type StateStore,
 } from "./domain.ts";
-import type { HostComponentDescriptor } from "./composition.ts";
+import type {
+  ComponentResource,
+  HostComponentDescriptor,
+} from "./composition.ts";
 import { problemResponse } from "./problems.ts";
 import type {
   RawAggregateDeclaration,
   RawComponentBinding,
   RawConfigMember,
+  RawContextMember,
   RawControllerDeclaration,
   RawControllerRoute,
   RawManagerDeclaration,
@@ -43,6 +47,36 @@ interface DomainManager {
 
 interface DomainController {
   handle(request: Request): Promise<Response>;
+}
+
+interface AggregateCapability {
+  readonly context: string;
+  readonly declaration: string;
+  readonly identity: string;
+}
+
+const aggregateCapabilityTokens = new WeakSet<object>();
+
+function aggregateCapability(
+  context: string,
+  declaration: string,
+): AggregateCapability {
+  const capability = Object.freeze({
+    context,
+    declaration,
+    identity: contextKind(context, declaration),
+  });
+  aggregateCapabilityTokens.add(capability);
+  return capability;
+}
+
+function isAggregateCapability(
+  value: unknown,
+  identity: string,
+): value is AggregateCapability {
+  return typeof value === "object" && value !== null &&
+    aggregateCapabilityTokens.has(value) &&
+    Reflect.get(value, "identity") === identity;
 }
 
 interface DeclarativeManager {
@@ -431,6 +465,10 @@ function validateSettingsPatterns(
 export function validateDeclarativeDomain(
   syntax: RawSyntaxModule,
   importedShapes: ReadonlyMap<string, ShapeDefinition> = new Map(),
+  importedDeclarations: ReadonlyMap<
+    string,
+    RawSyntaxModule["declarations"][number]
+  > = new Map(),
 ): readonly DomainDiagnostic[] {
   const diagnostics: DomainDiagnostic[] = [];
   const shapes = new Map(shapeDefinitionsFromDeclarations(syntax.declarations));
@@ -447,6 +485,18 @@ export function validateDeclarativeDomain(
   const contextDeclarations = syntax.declarations.filter(
     (declaration) => declaration.kind === "context",
   );
+  const contextBindings = new Map<
+    string,
+    Map<string, RawContextMember>
+  >();
+  const isDomainDeclaration = (
+    declaration: RawSyntaxModule["declarations"][number],
+  ): declaration is
+    | RawAggregateDeclaration
+    | RawManagerDeclaration
+    | RawControllerDeclaration =>
+    declaration.kind === "aggregate" || declaration.kind === "manager" ||
+    declaration.kind === "controller";
   for (const declaration of syntax.declarations) {
     if (declaration.kind === "config") {
       validateSettingsPatterns(declaration.settings, diagnostics, shapes);
@@ -510,57 +560,79 @@ export function validateDeclarativeDomain(
     if (context.kind !== "context") continue;
     duplicateNames(
       context.members.map((member) => member.name),
-      "Context member",
+      "Context binding",
       context.span,
       diagnostics,
     );
+    const bindings = new Map<string, typeof context.members[number]>();
+    contextBindings.set(context.name, bindings);
     for (const member of context.members) {
-      const declaration = declarations.get(member.name);
+      if (!bindings.has(member.name)) bindings.set(member.name, member);
+      const declaration = declarations.get(member.declaration);
       if (declaration === undefined) {
+        const imported = importedDeclarations.get(member.declaration);
+        if (
+          imported?.kind === "aggregate" || imported?.kind === "manager" ||
+          imported?.kind === "controller"
+        ) {
+          diagnostics.push({
+            code: "UNSUPPORTED_IMPORTED_CONTEXT_BINDING",
+            message:
+              `Context ${context.name} cannot bind imported ${imported.kind} ${member.declaration}; imported domain declarations are not supported as context bindings`,
+            span: member.span,
+          });
+          continue;
+        }
         diagnostics.push({
           code: "UNKNOWN_CONTEXT_MEMBER",
           message:
-            `Context ${context.name} lists unknown member ${member.name}`,
+            `Context ${context.name} binding ${member.name} refers to unknown declaration ${member.declaration}`,
           span: member.span,
         });
-      } else if (
-        member.exported &&
-        (declaration.kind === "aggregate" || declaration.kind === "manager")
-      ) {
+        continue;
+      }
+      if (!isDomainDeclaration(declaration)) {
+        diagnostics.push({
+          code: "INVALID_CONTEXT_BINDING",
+          message:
+            `Context ${context.name} binding ${member.name} must compose an aggregate, manager, or controller`,
+          span: member.span,
+        });
+        continue;
+      }
+      if (member.exported && declaration.kind !== "controller") {
         diagnostics.push({
           code: "PRIVATE_DOMAIN_MEMBER",
           message:
-            `Context ${context.name} must not export ${declaration.kind} ${member.name}`,
+            `Context ${context.name} must not export ${declaration.kind} binding ${member.name}`,
           span: member.span,
         });
       }
-      const owner = contexts.get(member.name);
-      if (owner !== undefined) {
+      const owner = contexts.get(declaration.name);
+      if (owner !== undefined && owner !== context.name) {
         diagnostics.push({
           code: "DUPLICATE_CONTEXT_OWNERSHIP",
           message:
-            `${member.name} is owned by both ${owner} and ${context.name}`,
+            `${declaration.name} is owned by both ${owner} and ${context.name}`,
           span: member.span,
         });
-      } else {
-        contexts.set(member.name, context.name);
+      } else if (owner === undefined) {
+        contexts.set(declaration.name, context.name);
       }
     }
-    for (const declaration of syntax.declarations) {
-      if (
-        declaration.kind === "aggregate" || declaration.kind === "manager" ||
-        declaration.kind === "controller"
-      ) {
-        if (!contexts.has(declaration.name)) {
-          diagnostics.push({
-            code: "UNOWNED_DOMAIN_MEMBER",
-            message:
-              `${declaration.kind} ${declaration.name} must belong to a context`,
-            span: declaration.span,
-          });
-        }
-      }
+  }
+  for (const declaration of syntax.declarations) {
+    if (isDomainDeclaration(declaration) && !contexts.has(declaration.name)) {
+      diagnostics.push({
+        code: "UNOWNED_DOMAIN_MEMBER",
+        message:
+          `${declaration.kind} ${declaration.name} must belong to a context`,
+        span: declaration.span,
+      });
     }
+  }
+  for (const context of contextDeclarations) {
+    if (context.kind !== "context") continue;
     const declaredDomain = new Map(
       syntax.declarations.flatMap((declaration) => {
         const name = declarationName(declaration);
@@ -714,6 +786,40 @@ export function validateDeclarativeDomain(
     if (declaration.kind !== "manager") continue;
     managers.set(declaration.name, declaration);
     duplicateNames(
+      declaration.parameters.map((parameter) => parameter.name),
+      `Manager ${declaration.name} parameter`,
+      declaration.span,
+      diagnostics,
+    );
+    const managerParameters = new Map(
+      declaration.parameters.map((parameter) =>
+        [
+          parameter.name,
+          parameter,
+        ] as const
+      ),
+    );
+    for (const parameter of declaration.parameters) {
+      const aggregate = aggregates.get(parameter.type);
+      if (aggregate === undefined) {
+        diagnostics.push({
+          code: "INVALID_MANAGER_PARAMETER",
+          message:
+            `Manager ${declaration.name} parameter ${parameter.name} must bind an aggregate declaration`,
+          span: parameter.span,
+        });
+      } else if (
+        contexts.get(aggregate.name) !== contexts.get(declaration.name)
+      ) {
+        diagnostics.push({
+          code: "CROSS_CONTEXT_AGGREGATE_ACCESS",
+          message:
+            `Manager ${declaration.name} cannot bind aggregate ${aggregate.name} outside its context`,
+          span: parameter.span,
+        });
+      }
+    }
+    duplicateNames(
       declaration.operations.map((operation) => operation.name),
       `Manager ${declaration.name} operation`,
       declaration.span,
@@ -744,26 +850,20 @@ export function validateDeclarativeDomain(
         operation.span,
         diagnostics,
       );
-      const aggregate = aggregates.get(operation.aggregate);
+      const parameter = managerParameters.get(
+        operation.aggregateParameter,
+      );
+      const aggregate = parameter === undefined
+        ? undefined
+        : aggregates.get(parameter.type);
       if (aggregate === undefined) {
         diagnostics.push({
           code: "UNKNOWN_MANAGER_AGGREGATE",
           message:
-            `Manager ${declaration.name}.${operation.name} refers to unknown aggregate ${operation.aggregate}`,
+            `Manager ${declaration.name}.${operation.name} refers to unbound aggregate capability ${operation.aggregateParameter}`,
           span: operation.span,
         });
         continue;
-      }
-      if (
-        (contexts.get(declaration.name) ?? "") !==
-          (contexts.get(aggregate.name) ?? "")
-      ) {
-        diagnostics.push({
-          code: "CROSS_CONTEXT_AGGREGATE_ACCESS",
-          message:
-            `Manager ${declaration.name} cannot send commands to aggregate ${aggregate.name} outside its context`,
-          span: operation.span,
-        });
       }
       if (
         !aggregate.commands.some((command) =>
@@ -786,6 +886,40 @@ export function validateDeclarativeDomain(
     )
   ) {
     if (declaration.kind !== "controller") continue;
+    duplicateNames(
+      declaration.parameters.map((parameter) => parameter.name),
+      `Controller ${declaration.name} parameter`,
+      declaration.span,
+      diagnostics,
+    );
+    const controllerParameters = new Map(
+      declaration.parameters.map((parameter) =>
+        [
+          parameter.name,
+          parameter,
+        ] as const
+      ),
+    );
+    for (const parameter of declaration.parameters) {
+      const manager = managers.get(parameter.type);
+      if (manager === undefined) {
+        diagnostics.push({
+          code: "INVALID_CONTROLLER_PARAMETER",
+          message:
+            `Controller ${declaration.name} parameter ${parameter.name} must bind a manager declaration`,
+          span: parameter.span,
+        });
+      } else if (
+        contexts.get(manager.name) !== contexts.get(declaration.name)
+      ) {
+        diagnostics.push({
+          code: "CROSS_CONTEXT_MANAGER_ACCESS",
+          message:
+            `Controller ${declaration.name} cannot bind manager ${manager.name} outside its context`,
+          span: parameter.span,
+        });
+      }
+    }
     for (const route of declaration.routes) {
       for (const shape of route.requestShapes) {
         validatePatternExpressions(
@@ -886,9 +1020,12 @@ export function validateDeclarativeDomain(
         }
       }
       const [managerName, operationName, ...extra] = route.operation.segments;
-      const manager = managerName === undefined
+      const managerParameter = managerName === undefined
         ? undefined
-        : managers.get(managerName);
+        : controllerParameters.get(managerName);
+      const manager = managerParameter === undefined
+        ? undefined
+        : managers.get(managerParameter.type);
       if (
         manager === undefined || operationName === undefined ||
         extra.length > 0 ||
@@ -917,6 +1054,93 @@ export function validateDeclarativeDomain(
           span: route.span,
         });
       }
+    }
+  }
+  for (const context of contextDeclarations) {
+    if (context.kind !== "context") continue;
+    const bindings = contextBindings.get(context.name) ?? new Map();
+    const edges = new Map<string, string[]>();
+    for (const member of context.members) {
+      const declaration = declarations.get(member.declaration);
+      const parameters = declaration?.kind === "manager" ||
+          declaration?.kind === "controller"
+        ? declaration.parameters
+        : [];
+      edges.set(member.name, []);
+      if (declaration === undefined || !isDomainDeclaration(declaration)) {
+        continue;
+      }
+      if (contexts.get(declaration.name) !== context.name) {
+        diagnostics.push({
+          code: "CROSS_CONTEXT_BINDING",
+          message:
+            `Context ${context.name} cannot compose ${declaration.name} outside its context`,
+          span: member.span,
+        });
+      }
+      if (member.arguments.length !== parameters.length) {
+        diagnostics.push({
+          code: "INVALID_CONTEXT_ARGUMENT_COUNT",
+          message:
+            `Context binding ${member.name} expects ${parameters.length} dependencies but received ${member.arguments.length}`,
+          span: member.span,
+        });
+      }
+      for (let index = 0; index < parameters.length; index++) {
+        const parameter = parameters[index];
+        const argument = member.arguments[index];
+        if (parameter === undefined || argument === undefined) continue;
+        const dependency = bindings.get(argument);
+        if (dependency === undefined) {
+          diagnostics.push({
+            code: "UNKNOWN_CONTEXT_BINDING",
+            message:
+              `Context binding ${member.name} refers to unknown binding ${argument}`,
+            span: member.span,
+          });
+          continue;
+        }
+        edges.get(member.name)?.push(argument);
+        if (dependency.declaration !== parameter.type) {
+          diagnostics.push({
+            code: "INVALID_CONTEXT_ARGUMENT_TYPE",
+            message:
+              `Context binding ${member.name}.${parameter.name} requires ${parameter.type}, not ${dependency.declaration}`,
+            span: member.span,
+          });
+        }
+      }
+    }
+    const visiting = new Set<string>();
+    const visited = new Set<string>();
+    const visitBinding = (name: string): void => {
+      if (visiting.has(name)) {
+        diagnostics.push({
+          code: "CONTEXT_DEPENDENCY_CYCLE",
+          message: `Context ${context.name} has a dependency cycle at ${name}`,
+          span: bindings.get(name)?.span,
+        });
+        return;
+      }
+      if (visited.has(name)) return;
+      visiting.add(name);
+      for (const dependency of edges.get(name) ?? []) {
+        visitBinding(dependency);
+      }
+      visiting.delete(name);
+      visited.add(name);
+    };
+    for (const name of bindings.keys()) visitBinding(name);
+    const contextExported = syntax.declarations.some((candidate) =>
+      candidate.kind === "export" && candidate.name === context.name
+    );
+    if (!contextExported && context.members.some((member) => member.exported)) {
+      diagnostics.push({
+        code: "PRIVATE_CONTEXT_EXPORT",
+        message:
+          `Context ${context.name} must be exported before its bindings can be exported`,
+        span: context.span,
+      });
     }
   }
   const exportedNames = new Set(
@@ -954,8 +1178,13 @@ export function validateDeclarativeDomain(
         context !== undefined &&
         context.members.some((member) => member.name === memberName)
       ) {
+        const contextBinding = context.members.find((member) =>
+          member.name === memberName
+        );
         return {
-          declaration: declarations.get(memberName),
+          declaration: contextBinding === undefined
+            ? undefined
+            : declarations.get(contextBinding.declaration),
           contextName,
           memberName,
         };
@@ -977,7 +1206,10 @@ export function validateDeclarativeDomain(
     for (const binding of members) {
       const resolved = modeComponent(binding);
       const component = resolved.declaration;
-      if (component?.kind !== "controller") continue;
+      if (
+        component?.kind !== "aggregate" && component?.kind !== "manager" &&
+        component?.kind !== "controller"
+      ) continue;
       const ownerName = contexts.get(component.name);
       const owner = ownerName === undefined
         ? undefined
@@ -986,40 +1218,29 @@ export function validateDeclarativeDomain(
         owner !== undefined &&
         (
           resolved.contextName !== owner.name ||
-          resolved.memberName !== component.name ||
           !exportedNames.has(owner.name) ||
-          contextMembers.get(component.name)?.exported !== true
+          contextMembers.get(resolved.memberName ?? "")?.exported !== true ||
+          component.kind !== "controller"
         )
       ) {
         diagnostics.push({
           code: "CONTROLLER_NOT_EXPORTED_BY_CONTEXT",
           message:
-            `Mode ${mode.name} must reach controller ${component.name} through its exported context`,
+            `Mode ${mode.name} must reach controller ${component.name} through an exported binding of its context`,
           span: binding.span,
         });
       }
     }
-    const rootContexts = new Set(
-      members.flatMap((binding) => {
-        const component = modeComponent(binding).declaration;
-        return component?.kind === "controller"
-          ? [contexts.get(component.name) ?? ""]
-          : [];
-      }),
-    );
     for (const binding of members) {
       const component = modeComponent(binding).declaration;
       if (
-        component?.kind === "manager" &&
-        (
-          contexts.has(component.name) ||
-          !rootContexts.has(contexts.get(component.name) ?? "")
-        )
+        (component?.kind === "manager" || component?.kind === "aggregate") &&
+        contexts.has(component.name)
       ) {
         diagnostics.push({
           code: "CROSS_CONTEXT_MANAGER_ACCESS",
           message:
-            `Mode ${mode.name} cannot compose context-owned manager ${component.name} directly`,
+            `Mode ${mode.name} cannot compose context-owned ${component.kind} ${component.name} directly`,
           span: binding.span,
         });
       }
@@ -1233,7 +1454,7 @@ function declarationContexts(
   ) {
     if (declaration.kind !== "context") continue;
     for (const member of declaration.members) {
-      contexts.set(member.name, declaration.name);
+      contexts.set(member.declaration, declaration.name);
     }
   }
   return contexts;
@@ -1398,10 +1619,42 @@ function managerDescriptor(
   definitions: ReadonlyMap<string, RawAggregateDeclaration>,
   shapes: ReadonlyMap<string, ShapeDefinition>,
 ): HostComponentDescriptor<DomainManager> {
+  const expectedCapabilities = manager.declaration.parameters.map(
+    (parameter) => contextKind(manager.context, parameter.type),
+  );
   return {
     kind: "manager",
-    parameters: [],
-    create() {
+    identity: contextKind(manager.context, manager.declaration.name),
+    parameters: manager.declaration.parameters.map((parameter, index) => ({
+      name: parameter.name,
+      type: {
+        kind: "component" as const,
+        category: "aggregate" as const,
+        identity: expectedCapabilities[index],
+      },
+    })),
+    create(arguments_) {
+      const aggregateCapabilities = new Map<string, AggregateCapability>();
+      for (
+        let index = 0;
+        index < manager.declaration.parameters.length;
+        index++
+      ) {
+        const parameter = manager.declaration.parameters[index];
+        const identity = expectedCapabilities[index];
+        const capability = arguments_[index];
+        if (
+          parameter === undefined || identity === undefined ||
+          !isAggregateCapability(capability, identity)
+        ) {
+          throw new Error(
+            `Manager ${manager.declaration.name} requires its declared aggregate capability ${
+              parameter?.type ?? ""
+            }`,
+          );
+        }
+        aggregateCapabilities.set(parameter.name, capability);
+      }
       return {
         value: {
           async invoke(operationName, input) {
@@ -1426,11 +1679,17 @@ function managerDescriptor(
                   reason: `Input does not match operation ${operationName}`,
                 } satisfies OperationOutcome;
               }
-              const aggregate = definitions.get(operation.aggregate);
-              if (aggregate === undefined) {
+              const capability = aggregateCapabilities.get(
+                operation.aggregateParameter,
+              );
+              const aggregate = capability === undefined
+                ? undefined
+                : definitions.get(capability.declaration);
+              if (aggregate === undefined || capability === undefined) {
                 return {
                   kind: "failed",
-                  error: `Unknown aggregate ${operation.aggregate}`,
+                  error:
+                    `Unknown aggregate capability ${operation.aggregateParameter}`,
                   mayHaveCommitted: false,
                 } satisfies CommandOutcome;
               }
@@ -1450,7 +1709,7 @@ function managerDescriptor(
               });
               commandStarted = true;
               const result = await commandRuntime().handle(
-                contextKind(manager.context, aggregate.name),
+                capability.identity,
                 identity,
                 operation.command,
                 payload,
@@ -1482,34 +1741,40 @@ function managerDescriptor(
 
 function controllerDescriptor(
   controller: DeclarativeController,
-  managersByName: ReadonlyMap<string, DeclarativeManager>,
-  managerDescriptors: ReadonlyMap<
-    string,
-    HostComponentDescriptor<DomainManager>
-  >,
   shapes: ReadonlyMap<string, ShapeDefinition>,
 ): HostComponentDescriptor<DomainController> {
-  const managerNames = new Set(
-    controller.declaration.routes.map((route) => route.operation.segments[0]),
-  );
   return {
     kind: "controller",
-    parameters: [],
-    async create() {
+    identity: contextKind(controller.context, controller.declaration.name),
+    parameters: controller.declaration.parameters.map((parameter) => ({
+      name: parameter.name,
+      type: {
+        kind: "component" as const,
+        category: "manager" as const,
+        identity: contextKind(controller.context, parameter.type),
+      },
+    })),
+    create(arguments_) {
       const managers = new Map<string, DomainManager>();
-      for (const name of managerNames) {
-        const managerDeclaration = managersByName.get(name);
-        const managerDescriptor = managerDescriptors.get(name);
+      for (
+        let index = 0;
+        index < controller.declaration.parameters.length;
+        index++
+      ) {
+        const parameter = controller.declaration.parameters[index];
+        const candidate = arguments_[index];
         if (
-          managerDeclaration === undefined ||
-          managerDeclaration.context !== controller.context ||
-          managerDescriptor === undefined
+          parameter === undefined || typeof candidate !== "object" ||
+          candidate === null ||
+          typeof Reflect.get(candidate, "invoke") !== "function"
         ) {
           throw new Error(
-            `Controller ${controller.declaration.name} cannot use manager ${name} outside its context`,
+            `Controller ${controller.declaration.name} requires manager dependency ${
+              parameter?.name ?? ""
+            }`,
           );
         }
-        managers.set(name, (await managerDescriptor.create([])).value);
+        managers.set(parameter.name, candidate as DomainManager);
       }
       return {
         value: {
@@ -1741,10 +2006,23 @@ export function createDeclarativeHostComponents(
     );
 
   const descriptors = new Map<string, HostComponentDescriptor>();
-  const managerDescriptors = new Map<
-    string,
-    HostComponentDescriptor<DomainManager>
-  >();
+  const declarations = new Map(
+    syntax.declarations.flatMap((declaration) => {
+      const name = declarationName(declaration);
+      return name === undefined ? [] : [[name, declaration] as const];
+    }),
+  );
+  const componentDescriptors = new Map<string, HostComponentDescriptor>();
+  for (const aggregate of aggregates.values()) {
+    const owner = contexts.get(aggregate.name) ?? "";
+    const identity = contextKind(owner, aggregate.name);
+    componentDescriptors.set(aggregate.name, {
+      kind: "aggregate",
+      identity,
+      parameters: [],
+      create: () => ({ value: aggregateCapability(owner, aggregate.name) }),
+    });
+  }
   for (const manager of managerDeclarations.values()) {
     const descriptor = managerDescriptor(
       manager,
@@ -1752,11 +2030,7 @@ export function createDeclarativeHostComponents(
       aggregates,
       shapes,
     );
-    managerDescriptors.set(manager.declaration.name, descriptor);
-    descriptors.set(
-      manager.declaration.name,
-      descriptor,
-    );
+    componentDescriptors.set(manager.declaration.name, descriptor);
   }
   for (const declaration of syntax.declarations) {
     if (declaration.kind !== "controller") continue;
@@ -1764,30 +2038,134 @@ export function createDeclarativeHostComponents(
       declaration,
       context: contexts.get(declaration.name) ?? "",
     };
-    const descriptor = controllerDescriptor(
-      controller,
-      managerDeclarations,
-      managerDescriptors,
-      shapes,
+    componentDescriptors.set(
+      declaration.name,
+      controllerDescriptor(controller, shapes),
     );
-    if (controller.context.length === 0) {
-      descriptors.set(declaration.name, descriptor);
-      continue;
-    }
-    const context = syntax.declarations.find((candidate) =>
-      candidate.kind === "context" &&
-      candidate.name === controller.context
+  }
+  for (const context of syntax.declarations) {
+    if (context.kind !== "context") continue;
+    const members = new Map(
+      context.members.map((member) => [member.name, member] as const),
     );
-    if (
-      context?.kind === "context" &&
-      context.members.some((member) =>
-        member.name === declaration.name && member.exported
-      )
-    ) {
-      descriptors.set(
-        `${controller.context}.${declaration.name}`,
-        descriptor,
-      );
+    const dependencies = new Map<string, Promise<ComponentResource>>();
+    const constructedDependencies: ComponentResource[] = [];
+    let activeRoots = 0;
+    const constructDependency = (name: string) => {
+      const existing = dependencies.get(name);
+      if (existing !== undefined) return existing;
+      const memberBinding = members.get(name);
+      if (memberBinding === undefined) {
+        return Promise.reject(
+          new Error(`Context ${context.name} has no binding ${name}`),
+        );
+      }
+      const pending = Promise.resolve().then(async () => {
+        const descriptor = componentDescriptors.get(
+          memberBinding.declaration,
+        );
+        if (descriptor === undefined) {
+          throw new Error(
+            `Context binding ${name} has no component descriptor`,
+          );
+        }
+        const arguments_: unknown[] = [];
+        for (const argument of memberBinding.arguments) {
+          const dependency = await constructDependency(argument);
+          arguments_.push(dependency.value);
+        }
+        const resource = await descriptor.create(arguments_);
+        constructedDependencies.push(resource);
+        return resource;
+      });
+      dependencies.set(name, pending);
+      return pending;
+    };
+    const disposeDependencies = async () => {
+      const failures: unknown[] = [];
+      for (const resource of constructedDependencies.splice(0).reverse()) {
+        try {
+          await resource.dispose?.();
+        } catch (error) {
+          failures.push(error);
+        }
+      }
+      dependencies.clear();
+      if (failures.length > 0) {
+        throw new AggregateError(
+          failures,
+          `Context ${context.name} dependency cleanup failed`,
+        );
+      }
+    };
+    for (const member of context.members) {
+      if (!member.exported) continue;
+      const target = declarations.get(member.declaration);
+      if (target?.kind !== "controller") continue;
+      const targetDescriptor = componentDescriptors.get(member.declaration);
+      if (targetDescriptor === undefined) continue;
+      descriptors.set(`${context.name}.${member.name}`, {
+        kind: "controller",
+        identity: contextKind(context.name, target.name),
+        parameters: [],
+        async create() {
+          activeRoots++;
+          let root: ComponentResource;
+          try {
+            const arguments_: unknown[] = [];
+            const contextBinding = members.get(member.name);
+            if (contextBinding === undefined) {
+              throw new Error(
+                `Context ${context.name} has no binding ${member.name}`,
+              );
+            }
+            for (const argument of contextBinding.arguments) {
+              const dependency = await constructDependency(argument);
+              arguments_.push(dependency.value);
+            }
+            root = await targetDescriptor.create(arguments_);
+          } catch (error) {
+            activeRoots--;
+            try {
+              if (activeRoots === 0) await disposeDependencies();
+            } catch (cleanupError) {
+              throw new AggregateError(
+                [error, cleanupError],
+                `Context ${context.name} construction and cleanup failed`,
+              );
+            }
+            throw error;
+          }
+          let disposed = false;
+          return {
+            value: root.value,
+            async dispose() {
+              if (disposed) return;
+              disposed = true;
+              const failures: unknown[] = [];
+              try {
+                await root.dispose?.();
+              } catch (error) {
+                failures.push(error);
+              }
+              activeRoots--;
+              if (activeRoots === 0) {
+                try {
+                  await disposeDependencies();
+                } catch (error) {
+                  failures.push(error);
+                }
+              }
+              if (failures.length > 0) {
+                throw new AggregateError(
+                  failures,
+                  `Context ${context.name} cleanup failed`,
+                );
+              }
+            },
+          };
+        },
+      });
     }
   }
   return descriptors;
