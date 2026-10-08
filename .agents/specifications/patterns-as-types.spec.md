@@ -18,6 +18,10 @@ inputs and outputs, the config, a job's arguments, a message body, and a route's
 parameters.
 
 - A shape MUST be a Uffda pattern, written in Uffda's pattern syntax.
+- Examples SHOULD use idiomatic, unwrapped pattern syntax. Parentheses MAY
+  group patterns where needed for precedence, but SHOULD NOT surround every
+  field, setting, or parameter pattern. Function-call parentheses belong to
+  expression syntax and are unaffected.
 - A named [Type](./types.spec.md) MUST provide a pattern and MAY also provide
   inspectable storage metadata and explicit construction. Any Uffda pattern
   satisfying Coleslaw's constraints MUST remain usable directly, including for

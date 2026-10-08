@@ -72,7 +72,7 @@ type Integer {
 - Fields MUST support inline patterns, rule references, literals, unions,
   intersections, and projections using ordinary Uffda pattern semantics. Common
   named patterns and Types are conveniences, not a closed set of allowed field
-  contracts. For example, `field count: (0 | PositiveInteger) = 0;` and
+  contracts. For example, `field count: 0 | PositiveInteger = 0;` and
   `field count: NonNegativeInteger = 0;` express equivalent validation.
 - A pattern MUST NOT be rejected merely because it lacks a named Type or
   embedded storage metadata. An adapter requiring an explicit storage descriptor

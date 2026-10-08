@@ -46,14 +46,14 @@ capitals.
   defaults MUST NOT be accepted.
 - Mode arguments MUST be shaped declaration parameters. Mode binding MUST NOT
   be an arbitrary function invocation or evaluate effectful expressions.
-- Named shapes MUST be declared as `shape Name = (Pattern);`, where `Pattern`
+- Named shapes MUST be declared as `shape Name = Pattern;`, where `Pattern`
   uses Uffda's pattern syntax. Shape references MUST obey explicit imports and
   exports and MUST NOT introduce effects or recursive unbounded resolution.
   Config patterns MUST remain self-contained under
   [config](./config.spec.md#the-config-declaration), rather than depend on
   named declarations.
 - A mode MAY declare an ordered parameter list before its kind, such as
-  `mode Batch(jobName: (string)): Job`. A selection's arguments MUST match the
+  `mode Batch(jobName: string): Job`. A selection's arguments MUST match the
   declared parameter shapes before any reached component is constructed.
   Parameter names MUST be unique. Missing, extra, or invalid arguments MUST
   fail startup. An existing Job selection with no explicit parameters MAY

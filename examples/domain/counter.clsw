@@ -1,6 +1,6 @@
 # Design example: Types, rules, metadata, and event projections are not implemented yet.
 # UUID, PositiveInteger, and NonNegativeInteger denote the specified common Types.
-# Equivalently, count may be declared as: field count: (0 | PositiveInteger) = 0;
+# Equivalently, count may be declared as: field count: 0 | PositiveInteger = 0;
 rule IncrementMetadata = { reason: string };
 
 export context CounterContext {
