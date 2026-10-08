@@ -351,3 +351,54 @@ Deno.test("req:application-shell-009 - non-data values cannot escape permissive 
   );
   assertEquals(await store.load("Counter", "one"), undefined);
 });
+
+Deno.test("req:application-shell-009 - ordered events see prior evolved fields", async () => {
+  const d = definition();
+  d.states.Ready.commands[0].decision = {
+    kind: "emit",
+    events: [
+      { name: "Incremented", payload: { input: "self" } },
+      { name: "Incremented", payload: { input: "self" } },
+    ],
+  };
+  const store = new MemoryStateStore();
+  const result = await runtime(store, d).handle(
+    "Counter",
+    "one",
+    "Increment",
+    payload(),
+  );
+  assertEquals(result.kind, "accepted");
+  assertEquals((await store.load("Counter", "one"))?.machine.fields.count, 2);
+  assertEquals((await store.load("Counter", "one"))?.version, 2);
+});
+
+Deno.test("req:application-shell-009 - thrown Save errors preserve uncertainty", async () => {
+  const store = new MemoryStateStore();
+  let calls = 0;
+  const result = await runtime({
+    load: store.load.bind(store),
+    save: () => {
+      calls++;
+      throw new Error("connection lost");
+    },
+  }).handle("Counter", "one", "Increment", payload());
+  if (result.kind !== "failed") throw new Error("expected failure");
+  assertEquals(result.mayHaveCommitted, true);
+  assertStringIncludes(result.error, "may stand");
+  assertEquals(calls, 1);
+});
+
+Deno.test("req:application-shell-009 - identity cannot be changed by an accepted event", async () => {
+  const store = new MemoryStateStore();
+  await runtime(store).handle("Counter", "one", "Increment", payload());
+  const result = await runtime(store).handle(
+    "Counter",
+    "one",
+    "Increment",
+    payload("other"),
+  );
+  assertEquals(result.kind, "rejected");
+  assertEquals((await store.load("Counter", "one"))?.machine.fields.count, 1);
+  assertEquals((await store.load("Counter", "one"))?.version, 1);
+});
