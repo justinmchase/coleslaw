@@ -80,6 +80,10 @@ capitals.
 
 ### Command handlers
 
+- A handler MUST inherit the validated bindings of its
+  [command declaration](./commands-and-events.spec.md#pattern-declarations-and-bindings).
+  It MUST NOT need to repeat the command's input or metadata patterns.
+
 - A command handler names a command, and MAY add a pattern the command's
   payload, the machine state, or both must match.
 - A state MAY have several handlers for one command. They are tried in order,
@@ -88,6 +92,10 @@ capitals.
 - A command handler's body MUST be one of: emitting a sequence of events, each
   with a payload computed by expressions from the command and the machine state;
   or rejecting, with a reason computed the same way.
+- Emission MAY name a
+  [command-derived event projection](./commands-and-events.spec.md#command-derived-event-projections)
+  without an inline payload. All payload projections MUST run against the same
+  decision-time state before any events are evolved.
 - A state MAY ignore a command: the command is accepted and emits no events.
 
 ### Event handlers
