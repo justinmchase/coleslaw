@@ -191,6 +191,8 @@ an expression fails.
   provide.
 - **Events that always fail.** A reaction that fails every time holds up every
   later event with its shard key for that reactor. How the runtime notices it,
-  how long it keeps trying, and where such an event goes.
+  how long it keeps trying, and where such an event goes. Modeled aggregate
+  errors do not automatically complete or skip it (see
+  [errors](./errors.spec.md#reactions-and-recovery)).
 - **Bounding a reaction.** A reaction's machine may loop. Whether its steps are
   bounded, and how.

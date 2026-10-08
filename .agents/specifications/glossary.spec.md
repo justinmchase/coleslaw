@@ -61,6 +61,17 @@ capitals.
   its kind, constant for the aggregate's life.
 - **Field**: a named piece of an aggregate's state, with a pattern its value
   must match.
+- **Modeled error**: a domain condition retained as data on an aggregate, raised
+  and resolved through its commands and events; not a runtime diagnostic.
+- **Error kind**: an aggregate-owned declaration of a modeled error, with
+  shapes for its occurrence identities and details.
+- **Error occurrence**: one identified instance of an error kind with immutable
+  details and an active or resolved status. A resolved occurrence remains stored
+  so a repeated raise does not reopen it.
+- **Raise**: an evolving action that creates an active occurrence if its kind
+  and identity are absent, and otherwise leaves the existing occurrence alone.
+- **Resolve**: an evolving action that marks an active occurrence resolved.
+  An absent or already-resolved occurrence is unchanged.
 - **Invariant**: a business rule about an aggregate's state that must hold after
   every command.
 - **Relationship**: a reference from one aggregate to another, made by identity.

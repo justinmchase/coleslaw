@@ -66,12 +66,14 @@ survive storage unchanged. Data is the set of values that can.
   string. Map keys and set members are limited to primitive data because
   JavaScript compares any other key by identity, and identity does not survive
   storage.
-- Functions, symbols, errors, class instances, promises, and every other value
-  not listed MUST NOT be data. Errors are excluded because what they carry, such
-  as a stack trace, depends on the host rather than the domain; a domain failure
-  is a rejection with a reason, which is data.
-- The shape of a field, a command or event payload, a projection, the config, a
-  job's arguments, or a message body MUST accept only data. A value that matches
+- Functions, symbols, host error objects, class instances, promises, and every
+  other value not listed MUST NOT be data. Host errors are excluded because
+  what they carry, such as a stack trace, depends on the host rather than the
+  domain. A rejection's reason and an aggregate's modeled error occurrences are
+  domain data, not host errors (see [errors](./errors.spec.md)).
+- The shape of a field, a command or event payload, a modeled error identity or
+  details value, a projection, the config, a job's arguments, or a message body
+  MUST accept only data. A value that matches
   such a shape's pattern but is not data MUST be refused as though the pattern
   had failed, so `any` in these shapes means any data.
 - A shape whose pattern requires a type that is never data (for example the
