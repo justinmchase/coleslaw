@@ -21,14 +21,14 @@ capitals.
 
 ## Purity
 
-Expressions compute values. Everything a program does is done by its
-declarations: aggregates emit events, and managers and reactors send commands
-and call services.
+Expressions compute values. Everything a program does is done by its declarations: aggregates emit events;
+managers and internal-event reactors send commands and enqueue messages; and
+managers and reactors call services.
 
 - An expression's value MUST depend only on the names in its scope, and
   evaluating it MUST have no effect.
-- An expression MUST NOT call a service, send a command, or emit an event.
-  Service operations are not values in any expression's scope.
+- An expression MUST NOT call a service, send a command or message, or emit an
+  event. Service operations are not values in any expression's scope.
 - An expression MUST NOT read the clock, generate randomness or identities, or
   read the environment. A value that varies must arrive from the program's edges
   (see the overview's [checkability](./overview.spec.md#checkability)).

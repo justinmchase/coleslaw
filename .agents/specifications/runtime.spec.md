@@ -1,9 +1,8 @@
 # Runtime
 
-This chapter defines what the runtime does with a program's aggregates and
-events: how it stores aggregate state, how it handles a command against that
-state, how often it retries a conflicted command, how it records events with the
-state and delivers them, and the services it needs to do so. It consolidates
+This chapter defines what the runtime does with a program's aggregates, events,
+and queued messages: how it stores aggregate state, handles commands, retries
+conflicts, records events and outbox messages, and delivers them. It consolidates
 what the [aggregates](./aggregates.spec.md), [reactors](./reactors.spec.md),
 [services](./services.spec.md), and [startup](./startup.spec.md) chapters
 promise about the runtime, and makes it precise. Terms are defined in the
@@ -52,18 +51,24 @@ section says what each step reads and writes.
 5. **Save.** Ask the state store to store the new state with its version
    increased by the number of events, on the condition that the stored version
    is still the one loaded, and in the same transaction to record an event
-   record for each event (see [recording events](#recording-events)).
+   record for each event and any messages the manager enqueues (see
+   [recording events](#recording-events) and
+   [outbox messages](#outbox-messages)).
 
 - Load and Save MUST be the only steps that touch storage. Decide, Evolve, and
   Check MUST be pure computations over the loaded state and the command.
-- Save MUST be atomic: the new state and every one of its event records are
-  stored together, or nothing is. This is a transactional outbox: the events
-  wait in the same store as the state until they are delivered.
+- Save MUST be atomic: the new state, every one of its event records, and every
+  message the manager enqueues are stored together, or nothing is. Events and
+  messages wait in the same store as the state until they are relayed.
 - Save MUST succeed only if the stored version equals the version loaded. For an
   aggregate with no stored state the loaded version is zero, so of two commands
   racing to create one aggregate at most one saves.
-- A decision accepted with no events MUST save nothing and record nothing. It
-  cannot conflict, and its outcome is accepted with the version loaded.
+- A decision accepted with no events and no messages MUST save nothing and
+  record nothing. It cannot conflict, and its outcome is accepted with the
+  version loaded.
+- A decision accepted with no events but with messages MUST atomically append
+  those messages to the outbox, conditioned on the stored version still being
+  the one loaded. It MUST NOT change the aggregate's state or version.
 - Between one command's Load and its Save, other commands MAY save the same
   aggregate. Nothing is locked; a conflict is detected at Save (see
   [concurrency](./aggregates.spec.md#concurrency)).
@@ -74,8 +79,9 @@ Handling a command ends in exactly one of the outcomes the aggregates chapter
 defines (see [outcomes](./aggregates.spec.md#outcomes)). This section says which
 step produces each.
 
-- **Accepted**: Save succeeded, or the decision emitted no events. The outcome
-  carries the events emitted and the aggregate's new version.
+- **Accepted**: Save succeeded, or the decision emitted no events and no
+  messages. The outcome carries the events emitted and the aggregate's new
+  version.
 - **Rejected**: the payload did not match, the decision rejected, or Check
   failed. Nothing was saved.
 - **Conflicted**: Save failed because the stored version had changed, on every
@@ -85,8 +91,8 @@ step produces each.
   Nothing was saved, except as the next rule allows.
 - When the runtime cannot learn whether a Save took effect, such as when the
   state store times out after committing, the outcome MUST be failed, and its
-  error MUST say that the change may stand. If it stands, its events were
-  recorded and are delivered like any other.
+  error MUST say that the change may stand. If it stands, its events and
+  messages were recorded and are delivered like any other.
 - A command's outcome is fixed when its last attempt ends. Reactions to its
   events MUST NOT affect it, and the runtime MUST NOT wait for reactions before
   reporting it.
@@ -213,6 +219,29 @@ from the record Save made, then lets it go.
   to the implementation, so the implementation can recognize a repeat (see
   [effects and repeats](./services.spec.md#effects-and-repeats)).
 
+## Outbox messages
+
+The state store is the durable outbox for messages. The runtime relays them to
+the queue implementation only after their outbox record is committed.
+
+- A manager's message record MUST be committed atomically with the command it
+  enqueues it with. A rejected, conflicted, or failed command MUST leave no
+  messages in the outbox.
+- A reaction's message record MUST be committed before its send step completes.
+  A failure after that point MUST NOT remove the message; a repeated reaction
+  may enqueue the same logical message again.
+- The outbox MUST retain each message until its queue implementation has
+  accepted it. If relay fails or its result is unknown, the runtime MUST retry
+  with the same message identity.
+- A queue implementation MUST tolerate receiving the same message identity
+  more than once, or the runtime MUST ensure duplicate acceptance does not
+  create multiple logical messages. Delivery from the queue to its consumer
+  remains at least once (see [queues](./queues.spec.md#delivery)).
+- A message MUST NOT be delivered to its consumer before its outbox record is
+  committed.
+- The relay MUST preserve outbox commit order for messages in the same queue
+  order group, including the declaration order of messages committed together.
+
 ## Keeping events
 
 - The runtime MUST NOT keep events after delivery for any purpose of its own: no
@@ -254,13 +283,21 @@ no technology for them and the config chooses their implementations.
 
 - Coleslaw MUST declare the runtime services itself, naming no technology:
   - **State store**: loads an aggregate's stored state and version; saves a new
-    state with its event records, atomically and on the condition of the
-    version, giving either saved or conflicted; gives the pending records for a
-    destination, in record order per shard key; marks a record completed for a
-    destination; and gives every stored state of a kind.
-  - **Event source**: accepts records from the relay, and delivers them to each
-    reactor in events mode, in record order per shard key, until that reactor
-    completes each one.
+    state with its event records and manager-enqueued messages, atomically and
+    on the condition of the version, giving either saved or conflicted; appends
+    reaction-enqueued messages durably; gives pending events and messages to
+    the relay; marks them complete for a destination; and gives every stored
+    state of a kind.
+  - **Event source**: accepts internal event records from the relay, and
+    delivers them to each internal-event reactor in events mode, in record
+    order per shard key, until that reactor completes each one.
+  - **Message broker**: accepts relayed outbox messages and delivers them to
+    the one consumer of each queue, respecting leases, dispositions, and order
+    groups (see [queues](./queues.spec.md)).
+  - **External event source**: gives external-event reactors declared events
+    with their payload, stable source identity, and delivery count. Its
+    implementation is configured at the program's boundary (see
+    [external events](./reactors.spec.md#external-events)).
 - Only the runtime MAY call a runtime service's operations. No declaration in a
   program MAY call them.
 - Coleslaw MUST provide an in-memory implementation of each runtime service, so
@@ -270,8 +307,10 @@ no technology for them and the config chooses their implementations.
   service, so the same program runs in memory locally and on a database and a
   broker in production.
 - A runtime service MUST be constructed only when the selected mode reaches it:
-  the state store when the mode handles commands or relays records, and the
-  event source when the mode publishes to it or runs in events mode.
+  the state store when the mode handles commands or relays records, the event
+  source when the mode publishes internal events or runs internal reactors in
+  events mode, the message broker when the mode sends or consumes queue
+  messages, and an external event source when the mode runs a reactor for it.
 - A failed call to a runtime service is a failure, not an outcome the program
   handles: a command whose Load or Save fails ends as failed, and a relay or
   delivery step that fails leaves its record pending.

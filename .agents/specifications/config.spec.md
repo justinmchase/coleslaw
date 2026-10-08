@@ -100,9 +100,10 @@ Coleslaw declares some settings itself, in every program:
   named for it (see [jobs](./jobs.spec.md#selecting-a-job)).
 - `commandAttempts`: the retry bound for conflicted commands (see
   [runtime](./runtime.spec.md#the-retry-bound)).
-- the implementation and settings of each service and queue the selected mode
-  reaches (see [startup](./startup.spec.md#services) and
-  [consumers](./consumers.spec.md)).
+- the implementation and settings of each service, queue, and external event
+  source the selected mode reaches (see [startup](./startup.spec.md#services),
+  [queues](./queues.spec.md#implementations), and
+  [reactors](./reactors.spec.md#external-events)).
 
 ## Open questions
 

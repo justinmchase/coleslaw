@@ -64,7 +64,8 @@ Coleslaw defines four kinds of mode. Each runs one kind of entry point.
 ## What a mode constructs
 
 - A mode MUST construct only what its entry points reach: the managers they use,
-  the reactors that run in process, and the services those use (see
+  the reactors that run in process, the queues they send to or consume, the
+  external event sources they handle, and the services those use (see
   [startup](./startup.spec.md)).
 - The config MUST be checked only for the settings the selected mode reaches. A
   process MUST NOT need settings, such as a connection string, for a service its

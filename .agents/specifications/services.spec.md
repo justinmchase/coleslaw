@@ -33,8 +33,10 @@ the world only ever follows a change to the program.
 - An effect changes the world outside the program, such as sending an email or
   charging a card.
 - Managers and reactors MAY call queries.
-- Only reactors MAY call effects. A reactor reacts to events that have already
-  been saved, so an effect never happens for a change the program then refuses.
+- Only reactors handling internal events MAY call effects. Such a reactor reacts
+  to events that have already been saved, so an effect never happens for a
+  change the program then refuses. External-event reactors invoke managers only
+  (see [reactors](./reactors.spec.md#external-events)).
 - Nothing else MAY call a service operation: not controllers, consumers, or
   jobs, which go through managers, and not aggregates, projections, monitors,
   expressions, or config.

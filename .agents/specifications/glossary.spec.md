@@ -26,7 +26,7 @@ capitals.
   The same word MAY mean different things in different contexts, and contexts
   integrate only through what each exports, mainly events.
 - **Member**: an aggregate, projection, manager, reactor, controller, consumer,
-  or job that a context lists, and that belongs to that context alone.
+  queue, or job that a context lists, and that belongs to that context alone.
 - **Default context**: the unnamed context of every owned declaration that no
   context lists. It exports nothing.
 - **Package**: modules published together under one name and version, imported
@@ -71,6 +71,10 @@ capitals.
   example `Published`). It carries a payload. Every change to an aggregate is
   described by an event, which is delivered to what observes it and is then no
   longer part of the program's working state. Events are immutable.
+- **Internal event**: an event emitted by an aggregate in this program.
+- **External event**: a fact published by another application, in its
+  vocabulary, and delivered through a declared event source. It is not an
+  aggregate event of this program.
 - **Stored state**: an aggregate's machine state and version, as saved by its
   last accepted command. It is the source of truth for the aggregate.
 - **Version**: the number of events that have changed an aggregate. Each event's
@@ -84,10 +88,11 @@ capitals.
   in order; nothing else is ordered.
 - **Entity**: a value inside an aggregate with an identity unique only within
   that aggregate, such as a line of an order.
-- **Outcome**: how handling a command ends: accepted, with the new state saved
-  and its events recorded; rejected, with a reason; conflicted, when concurrent
-  changes outlasted the runtime's retries; or failed, with an error, when
-  handling met a defect in the program or a failed call to a runtime service.
+- **Outcome**: how handling a command ends: accepted, with its state change,
+  events, and any manager-enqueued messages saved; rejected, with a reason;
+  conflicted, when concurrent changes outlasted the runtime's retries; or
+  failed, with an error, when handling met a defect in the program or a failed
+  call to a runtime service.
 - **Rejection**: a decision to refuse a command, with a reason. A rejection is a
   normal business outcome, not an error.
 - **Conflict**: a save that failed because the aggregate's stored version
@@ -154,14 +159,14 @@ capitals.
 - **Operation**: one business operation of a manager: it binds its input and
   progresses one aggregate with at most one command. Any further logic is a
   state machine that lasts for the invocation and is never stored.
-- **Reactor**: a declaration that reacts to events by sending commands and
-  calling services. Depending on the config, it runs in the process that saved
-  the events or, in events mode, as an entry point.
+- **Reactor**: a declaration that reacts to internal events from this program
+  or external events from another application. Internal-event reactors may use
+  the full reactor capabilities; external-event reactors invoke managers only.
 - **Reaction**: one reactor handling one event, by a state machine that lasts
   for the reaction and is never stored. A failed reaction is run again.
-- **Event source**: a runtime service that accepts recorded events from the
-  processes that save them and delivers them to reactors in events mode, such as
-  a Kafka topic.
+- **Event source**: an implementation that supplies internal or external events
+  to reactors in events mode. Internal events are accepted from processes that
+  save them; external events are supplied by another application's source.
 - **Runtime service**: a service Coleslaw declares for the runtime's own needs,
   such as the state store and the event source. Only the runtime calls it; the
   config chooses its implementation, and Coleslaw provides one in memory.
@@ -175,31 +180,30 @@ capitals.
 - **Query**: a service operation that returns information and changes nothing.
   Managers and reactors may call queries.
 - **Effect**: a service operation that changes the world outside the program.
-  Only reactors may call effects.
+  Only reactors handling internal events may call effects.
 - **Controller**: a set of routes by which the outside world invokes managers
   and reads projections, in API mode.
-- **Queue**: a source of messages from outside the program, such as a message
-  broker's queue or topic subscription. A queue is declared with the shape of
-  its messages, names no technology, and is implemented as a service is.
-- **Message**: one item taken from a queue. Its body is matched against a
-  pattern, like any other input.
-- **Message record**: a message's body and attributes together with what its
-  queue's implementation gives with it: the message's identity, constant across
-  its deliveries, and its delivery count.
-- **Order key**: the key that orders a queue's messages, computed by the queue's
-  declaration from a message's body and attributes. Messages with the same order
-  key reach each consumer in the order the queue holds them; nothing else is
-  ordered.
+- **Queue**: a program-owned source of internal work messages, handled by
+  exactly one consumer. A queue declares its message shape and names no
+  technology; managers and internal reactors of its context may enqueue
+  messages, and the runtime delivers them in worker mode.
+- **Message**: one item enqueued to a program-owned queue. Its value matches the
+  queue's declared shape.
+- **Message record**: the message's identity, its origin, the time it was sent,
+  and its delivery count, together with the message itself.
+- **Order group**: an optional key declared by a queue from a message. Messages
+  with the same key are delivered to its consumer in enqueue order; other
+  messages may be handled in any order.
 - **Disposition**: how a consumer's handling of a message ends: acknowledged, so
   it is not delivered again; dead-lettered, with a reason; or failed, so it is
   delivered again.
-- **Dead letter**: where a message goes, with its body, attributes, identity,
-  and a reason, when the program will not handle it. The program never reads
+- **Dead letter**: where a message goes, with its value, identity, and a reason,
+  when the program will not handle it. The program never reads
   dead letters.
 - **Redelivery bound**: the most times a message is delivered to a consumer
   before a failing message is dead-lettered.
-- **Consumer**: an entry point of worker mode that handles one queue's messages
-  by invoking managers, until stopped.
+- **Consumer**: the one entry point of worker mode that handles a program-owned
+  queue's messages by invoking managers, until stopped.
 - **Job**: a named unit of work that invokes managers and runs once, in job
   mode, by a state machine that lasts for the run and is never stored. Whatever
   starts the process, such as cron or a migration step, decides when it runs.

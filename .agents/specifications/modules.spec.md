@@ -63,8 +63,8 @@ aggregates.
   module imports, so a context MAY gather declarations from any modules,
   wherever they are.
 - A member MUST be an aggregate, a projection, a manager, a reactor, a
-  controller, a consumer, or a job. These are owned: each MUST be a member of at
-  most one context in a program.
+  controller, a consumer, a queue, or a job. These are owned: each MUST be a
+  member of at most one context in a program.
 - Shapes, funcs, and service declarations hold no state and are not owned.
   Contexts MAY use them freely, and a body MAY list them so that the context can
   export them.
@@ -79,9 +79,10 @@ aggregates.
   such as `export Product.ProductDiscontinued;`.
 - A context MAY export events, projections, shapes, and funcs, which other
   contexts use, and controllers, consumers, jobs, and reactors, which modes run.
-- A context MUST NOT export aggregates, managers, or services. Its aggregates
-  change only through its own managers and reactors, and its managers are
-  reached only through its own entry points.
+- A context MUST NOT export aggregates, managers, queues, or services. Its
+  aggregates change only through its own managers and reactors, its queues are
+  used only within the context, and its managers are reached only through its
+  own entry points.
 
 ### The boundary
 
