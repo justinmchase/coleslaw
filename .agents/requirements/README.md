@@ -15,3 +15,4 @@ verify it cite it with `req:{id}`.
 - [Lifecycle](./application-shell/006-lifecycle.requirement.md)
 - [CLI and artifacts](./application-shell/007-cli.requirement.md)
 - [Host descriptors](./application-shell/008-host.requirement.md)
+- [Aggregate kernel](./application-shell/009-domain-kernel.requirement.md)
