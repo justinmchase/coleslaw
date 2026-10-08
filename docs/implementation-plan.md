@@ -85,6 +85,12 @@ Controller injection is limited to declared infrastructure capabilities, such
 as logging or authentication, and its ordinary managers/projections. Domain
 queries and effects keep their existing layer restrictions.
 
+The sketch's `Catalog.Manager` composition is illustrative, not permission to
+export a manager. The modules specification forbids exporting managers and
+aggregates from a context. The checked domain slice must compose the exported
+controller's internal manager dependencies without exposing them across
+contexts; the implementation must reject boundary violations.
+
 An API label can select a Web mode containing controllers from several
 contexts. Those controllers reach multiple managers and aggregate kinds;
 one-aggregate atomicity remains a rule per command, not per mode.
@@ -237,8 +243,10 @@ The approved plan was merged in #16. Implementation continues in #17.
 
 - The public Uffda integration prerequisites are implemented in
   [justinmchase/uffda#270](https://github.com/justinmchase/uffda/pull/270).
-  Its tested commit is `61515312d4ead8154b1e6d30f62d2cd6896bddd5`; its CI
-  checks passed. It is not merged or published. Development and CI must use an
+  Its current integration commit is `b462bd56a977958105ea02cb917f1ba9a12f7daa`,
+  including the public expression evaluator. Focused upstream validation passed;
+  CI for this follow-up is pending. It is not merged or published.
+  Development and CI must use an
   explicit mapping to this checkout until a compatible JSR release exists.
 - The application-shell specification and requirements are committed, including
   Web naming, settings selection, explicit composition, and host boundaries.
