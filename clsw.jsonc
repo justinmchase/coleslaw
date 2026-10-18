@@ -1,0 +1,9 @@
+{
+  "imports": {
+    "@justinmchase/uffda": "jsr:@justinmchase/uffda@^0.9.2"
+  },
+  "exports": {
+    ".": "./examples/shell/app.clsw"
+  },
+  "outDir": "./bin"
+}

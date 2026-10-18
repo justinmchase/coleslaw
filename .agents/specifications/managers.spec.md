@@ -96,7 +96,7 @@ through messages the operation enqueues with that command.
   its command produced.
 - Projection reads and collection-returning service queries MUST follow
   [queries](./queries.spec.md). A manager MUST inherit the selected mode's
-  traversal capability and any invoking API request's shared read-step budget;
+  traversal capability and any invoking Web request's shared read-step budget;
   entering another operation MUST NOT reset that budget.
 
 ## Results
@@ -136,7 +136,7 @@ operation may be invoked again with the same input.
 ## Open questions
 
 - **Bounding a machine.** An operation state machine may loop, for example
-  reading pages of a projection. Read steps in API mode are bounded by
+  reading pages of a projection. Read steps in Web mode are bounded by
   [queries](./queries.spec.md#mode-capability); how other steps and loops are
   bounded remains open.
 - **Waiting for projections.** How long an operation waits for a projection to

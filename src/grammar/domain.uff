@@ -1,0 +1,337 @@
+import "@justinmchase/uffda/pattern" Pattern;
+import "@justinmchase/uffda/expression" Expression;
+
+export ContextDeclaration;
+export AggregateDeclaration;
+export ExportedContext;
+export ExportedAggregate;
+export ManagerDeclaration;
+export ExportedManager;
+export ControllerDeclaration;
+export ExportedController;
+export DomainParameter;
+
+rule DomainIdentifier = string;
+
+rule DomainParameter =
+  n:DomainIdentifier
+  ":"
+  t:DomainIdentifier
+  -> { name: n, type: t }
+;
+
+rule AdditionalDomainParameter =
+  p:DomainParameter
+  -> p
+;
+
+rule DomainParameters =
+  "("
+  p:DomainParameter
+  r:AdditionalDomainParameter*
+  ")"
+  -> (flat [p r])
+;
+
+rule ContextArgument =
+  not ")"
+  a:DomainIdentifier
+  -> a
+;
+
+rule ContextArguments =
+  "("
+  a:ContextArgument*
+  ")"
+  -> a
+;
+
+rule ContextMember =
+  e:("export" -> true)?
+  n:DomainIdentifier
+  ":"
+  d:DomainIdentifier
+  a:ContextArguments?
+  ";"
+  -> {
+    name: n,
+    declaration: d,
+    arguments: (coalesce a []),
+    exported: (coalesce e false)
+  }
+;
+
+rule ContextDeclaration =
+  "context"
+  n:DomainIdentifier
+  "{"
+  m:ContextMember*
+  "}"
+  -> { kind: "context", name: n, members: m }
+;
+
+rule ExportedContext =
+  "export"
+  d:ContextDeclaration
+  -> (pack { kind: "export", name: d.name } d)
+;
+
+rule AggregateField =
+  "field"
+  n:DomainIdentifier
+  ":"
+  "(" p:Pattern ")"
+  "="
+  e:Expression
+  ";"
+  -> { name: n, pattern: p, initial: e }
+;
+
+rule AggregateIdentity =
+  "identity"
+  n:DomainIdentifier
+  ":"
+  "(" p:Pattern ")"
+  "="
+  e:Expression
+  ";"
+  -> { name: n, pattern: p, initial: e }
+;
+
+rule AggregateCommand =
+  "command"
+  n:DomainIdentifier
+  ":"
+  "(" p:Pattern ")"
+  ";"
+  -> { name: n, pattern: p }
+;
+
+rule AggregateEvent =
+  "event"
+  n:DomainIdentifier
+  ":"
+  "(" p:Pattern ")"
+  ";"
+  -> { name: n, pattern: p }
+;
+
+rule AggregateEmittedEvent =
+  "emit"
+  e:DomainIdentifier
+  ":"
+  p:Expression
+  ";"
+  -> { name: e, payload: p }
+;
+
+rule AggregateCommandEvent =
+  "command"
+  n:DomainIdentifier
+  "{"
+  b:AggregateEmittedEvent*
+  "}"
+  -> {
+    command: n,
+    decision: { kind: "emit", events: b }
+  }
+;
+
+rule AggregateCommandReject =
+  "command"
+  n:DomainIdentifier
+  "{"
+  "reject"
+  r:Expression
+  ";"
+  "}"
+  -> {
+    command: n,
+    decision: { kind: "reject", reason: r }
+  }
+;
+
+rule AggregateStateCommand =
+  | AggregateCommandEvent
+  | AggregateCommandReject
+;
+
+rule AggregateSetField =
+  "set"
+  f:DomainIdentifier
+  "="
+  e:Expression
+  ";"
+  -> { field: f, expression: e }
+;
+
+rule AggregateEventHandler =
+  "event"
+  n:DomainIdentifier
+  "{"
+  s:AggregateSetField*
+  m:("move" t:DomainIdentifier ";" -> t)?
+  "}"
+  -> {
+    event: n,
+    set: s,
+    move: m
+  }
+;
+
+rule AggregateStateMember =
+  | AggregateStateCommand
+  | AggregateEventHandler
+;
+
+rule AggregateState =
+  "state"
+  n:DomainIdentifier
+  "{"
+  h:AggregateStateMember*
+  "}"
+  -> {
+    name: n,
+    handlers: h
+  }
+;
+
+rule AggregateStartState =
+  "start"
+  s:AggregateState
+  -> s
+;
+
+rule AggregateInvariant =
+  "invariant"
+  "(" p:Pattern ")"
+  ";"
+  -> p
+;
+
+rule AggregateDeclaration =
+  "aggregate"
+  n:DomainIdentifier
+  "{"
+  i:AggregateIdentity
+  f:AggregateField*
+  c:AggregateCommand*
+  e:AggregateEvent*
+  v:AggregateInvariant*
+  a:AggregateState*
+  t:AggregateStartState
+  b:AggregateState*
+  "}"
+  -> {
+    kind: "aggregate",
+    name: n,
+    identityField: i.name,
+    fields: (flat [i f]),
+    commands: c,
+    events: e,
+    invariants: v,
+    start: t.name,
+    states: (flat [a t b])
+  }
+;
+
+rule ExportedAggregate =
+  "export"
+  d:AggregateDeclaration
+  -> (pack { kind: "export", name: d.name } d)
+;
+
+rule DomainNamePath =
+  a:DomainIdentifier
+  b:("." n:DomainIdentifier -> n)*
+  -> { segments: (flat [a b]) }
+;
+
+rule DomainQuotedString =
+  "\""
+  a:(not "\"" string)*
+  "\""
+  -> (join (flat a) "")
+;
+
+rule ManagerOperation =
+  "operation"
+  n:DomainIdentifier
+  "{"
+  "input" ":" "(" i:Pattern ")" ";"
+  "result" ":" "(" r:Pattern ")" ";"
+  "send" a:DomainIdentifier "." c:DomainIdentifier
+  "{"
+  "identity" ":" identity:Expression ";"
+  "payload" ":" payload:Expression ";"
+  "}"
+  "}"
+  -> {
+    name: n,
+    input: i,
+    result: r,
+    aggregateParameter: a,
+    command: c,
+    identity: identity,
+    payload: payload
+  }
+;
+
+rule ManagerDeclaration =
+  "manager"
+  n:DomainIdentifier
+  p:DomainParameters?
+  "{"
+  o:ManagerOperation*
+  "}"
+  -> { kind: "manager", name: n, parameters: (coalesce p []), operations: o }
+;
+
+rule ExportedManager =
+  "export"
+  d:ManagerDeclaration
+  -> (pack { kind: "export", name: d.name } d)
+;
+
+rule ControllerRequestShape =
+  | ("path" ":" "(" p:Pattern ")" ";" -> { kind: "path", pattern: p })
+  | ("query" ":" "(" p:Pattern ")" ";" -> { kind: "query", pattern: p })
+  | ("headers" ":" "(" p:Pattern ")" ";" -> { kind: "headers", pattern: p })
+  | ("body" ":" "(" p:Pattern ")" ";" -> { kind: "body", pattern: p })
+;
+
+rule ControllerRoute =
+  "route"
+  m:DomainIdentifier
+  p:DomainQuotedString
+  a:("public" -> true)?
+  "{"
+  "operation" o:DomainNamePath ";"
+  s:ControllerRequestShape*
+  "input" ":" i:Expression ";"
+  "}"
+  -> {
+    method: m,
+    path: p,
+    public: (coalesce a false),
+    operation: o,
+    requestShapes: s,
+    input: i
+  }
+;
+
+rule ControllerDeclaration =
+  "controller"
+  n:DomainIdentifier
+  p:DomainParameters?
+  "{"
+  r:ControllerRoute*
+  "}"
+  -> { kind: "controller", name: n, parameters: (coalesce p []), routes: r }
+;
+
+rule ExportedController =
+  "export"
+  d:ControllerDeclaration
+  -> (pack { kind: "export", name: d.name } d)
+;

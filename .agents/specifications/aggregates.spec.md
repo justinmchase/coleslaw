@@ -31,9 +31,9 @@ capitals.
 
 - An aggregate declaration MUST name the aggregate's kind and declare its
   identity, its fields, its commands, its events, and its state machine.
-- An aggregate MAY declare modeled error kinds. Their occurrences MUST be
-  stored as part of its machine state and changed only through evolving its
-  events (see [errors](./errors.spec.md)).
+- An aggregate MAY declare modeled error kinds. Their occurrences MUST be stored
+  as part of its machine state and changed only through evolving its events (see
+  [errors](./errors.spec.md)).
 - Every aggregate of a kind MUST have a distinct identity, and an aggregate's
   identity MUST NOT change.
 - An aggregate is reached only through its root: the aggregate as a whole.
@@ -72,8 +72,11 @@ Handling a command is one transaction on one aggregate:
   that its change and messages may stand (see
   [runtime](./runtime.spec.md#outcomes)).
 - A command sent to an identity with no stored state is handled by the state
-  machine's start state, with the initial state. This is how aggregates are
-  created.
+  machine's start state, with validated explicit creation values or declared
+  initializers for ordinary fields. Its identity is the validated supplied
+  address. This is how aggregates with known identities are created (see
+  [Types](./types.spec.md#aggregate-identities)); repository-assigned-at-insert
+  creation requires a separately specified protocol.
 
 ## Outcomes
 

@@ -17,3 +17,32 @@ jobs:
 
       - name: Specs audit
         uses: justinmchase/specs@v1
+
+  application-shell:
+    name: Application shell
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Coleslaw
+        uses: actions/checkout@v5
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Setup Uffda CLI
+        uses: justinmchase/uffda/.github/actions/uffda-setup@0.9.2
+        with:
+          version: latest
+
+      - name: Compile Coleslaw grammar
+        run: deno task grammar
+
+      - name: Check, lint, and test shell
+        run: |
+          deno task check
+          deno lint cslw.ts src/*.ts test/*.ts test/fixtures/metadata/*.ts
+          deno fmt --check README.md docs/implementation-plan.md deno.jsonc cslw.ts src/*.ts test/*.ts test/fixtures/metadata/*.ts
+          deno task test
+          ./cslw check examples/shell/app.clsw
+          ./cslw check examples/domain/counter-runtime.clsw

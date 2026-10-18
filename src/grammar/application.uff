@@ -1,0 +1,292 @@
+import "@justinmchase/uffda/tokenizer" TokenizerNoWhitespace;
+import "@justinmchase/uffda/pattern" Pattern;
+import "@justinmchase/uffda/expression" Expression;
+import "@justinmchase/uffda/imports" ImportDeclarationSyntax;
+import "@justinmchase/uffda/exports" ExportDeclarationSyntax;
+import "@justinmchase/uffda/source" Source;
+import "./domain.uff" ContextDeclaration AggregateDeclaration
+  ExportedContext ExportedAggregate ManagerDeclaration ExportedManager
+  ControllerDeclaration ExportedController;
+
+export rule ColeslawLang =
+  |> Source
+  |> [TokenizerNoWhitespace]
+  |> [ModuleBody]
+;
+
+rule Identifier = string;
+
+rule NamePath =
+  a:Identifier
+  b:("." n:Identifier -> n)*
+  -> { segments: (flat [a b]) }
+;
+
+rule QuotedString =
+  "\"" a:(not "\"" t:string -> t)* "\""
+  -> (join (flat a) "")
+;
+
+rule Setting =
+  s:("secret" -> true)?
+  n:Identifier
+  ":"
+  "("
+  p:Pattern
+  ")"
+  ";"
+  -> {
+    kind: "setting",
+    name: n,
+    pattern: p,
+    secret: (coalesce s false)
+  }
+;
+
+rule SettingGroup =
+  n:Identifier
+  "{"
+  m:ConfigMember*
+  "}"
+  -> { kind: "group", name: n, settings: m }
+;
+
+rule ConfigMember =
+  | Setting
+  | SettingGroup
+;
+
+rule ConfigDeclaration =
+  "config"
+  n:Identifier
+  "{"
+  m:ConfigMember*
+  "}"
+  -> { kind: "config", name: n, settings: m }
+;
+
+rule ShapeDeclaration =
+  "shape"
+  n:Identifier
+  "="
+  "("
+  p:Pattern
+  ")"
+  ";"
+  -> { kind: "shape", name: n, pattern: p }
+;
+
+rule ExportedShape =
+  "export"
+  d:ShapeDeclaration
+  -> (pack { kind: "export", name: d.name } d)
+;
+
+rule ExportedConfig =
+  "export"
+  d:ConfigDeclaration
+  -> (pack { kind: "export", name: d.name } d)
+;
+
+rule ModeKind =
+  | ("Web" -> "Web")
+  | ("Worker" -> "Worker")
+  | ("Job" -> "Job")
+  | ("Events" -> "Events")
+  | NamePath
+;
+
+rule ComponentArguments =
+  "("
+  a:Expression
+  b:AdditionalArgument*
+  ")"
+  -> (flat [a b])
+;
+
+rule AdditionalArgument =
+  ","
+  e:Expression
+  -> e
+;
+
+rule ComponentBinding =
+  c:NamePath
+  a:ComponentArguments?
+  n:Identifier
+  ";"
+  -> {
+    component: c,
+    arguments: (coalesce a []),
+    name: n
+  }
+;
+
+rule EntryPointSectionName =
+  | ("controllers" -> "controllers")
+  | ("jobs" -> "jobs")
+  | ("consumers" -> "consumers")
+  | ("reactors" -> "reactors")
+;
+
+rule ComponentSectionName =
+  | ("services" -> "services")
+  | ("repositories" -> "repositories")
+  | ("managers" -> "managers")
+  | EntryPointSectionName
+;
+
+rule CompositionSection =
+  n:ComponentSectionName
+  "{"
+  b:ComponentBinding*
+  "}"
+  -> { kind: "section", name: n, bindings: b }
+;
+
+rule ModeDeclaration =
+  "mode"
+  n:Identifier
+  p:ModeParameters?
+  ":"
+  k:ModeKind
+  "{"
+  s:CompositionSection*
+  "}"
+  -> {
+    kind: "mode",
+    name: n,
+    parameters: (coalesce p []),
+    modeKind: k,
+    sections: s
+  }
+;
+
+rule ModeParameter =
+  n:Identifier
+  ":"
+  "("
+  p:Pattern
+  ")"
+  -> { name: n, pattern: p }
+;
+
+rule ModeParameters =
+  "("
+  p:ModeParameter
+  r:AdditionalModeParameter*
+  ")"
+  -> (flat [p r])
+;
+
+rule AdditionalModeParameter =
+  ","
+  m:ModeParameter
+  -> m
+;
+
+rule ExportedMode =
+  "export"
+  d:ModeDeclaration
+  -> (pack { kind: "export", name: d.name } d)
+;
+
+rule ConfigBinding =
+  "config"
+  c:NamePath
+  n:Identifier
+  ";"
+  -> { config: c, configBinding: n }
+;
+
+rule PositionalBinding =
+  i:string
+  ":"
+  s:NamePath
+  ";"
+  -> { index: (int i), setting: s }
+;
+
+rule PositionalBindings =
+  "arguments"
+  "{"
+  b:PositionalBinding*
+  "}"
+  -> b
+;
+
+rule ModeSelection =
+  l:QuotedString
+  "="
+  ">"
+  m:NamePath
+  a:ComponentArguments?
+  ";"
+  -> {
+    kind: "selection",
+    label: l,
+    mode: m,
+    arguments: (coalesce a [])
+  }
+;
+
+rule ModeSelections =
+  "mode"
+  s:NamePath
+  "{"
+  m:ModeSelection*
+  "}"
+  -> { selector: s, selections: m }
+;
+
+rule ProgramDeclaration =
+  "program"
+  n:Identifier
+  "{"
+  c:ConfigBinding
+  p:PositionalBindings?
+  m:ModeSelections
+  "}"
+  -> {
+    kind: "program",
+    name: n,
+    config: c.config,
+    configBinding: c.configBinding,
+    selector: m.selector,
+    positionals: (coalesce p []),
+    selections: m.selections
+  }
+;
+
+rule ExportedProgram =
+  "export"
+  d:ProgramDeclaration
+  -> (pack { kind: "export", name: d.name } d)
+;
+
+rule ModuleDeclaration =
+  | ExportedShape
+  | ImportDeclarationSyntax
+  | ExportDeclarationSyntax
+  | ExportedConfig
+  | ExportedMode
+  | ExportedProgram
+  | ExportedContext
+  | ExportedAggregate
+  | ExportedManager
+  | ExportedController
+  | ConfigDeclaration
+  | ShapeDeclaration
+  | ModeDeclaration
+  | ProgramDeclaration
+  | ContextDeclaration
+  | AggregateDeclaration
+  | ManagerDeclaration
+  | ControllerDeclaration
+;
+
+rule ModuleBody =
+  d:ModuleDeclaration*
+  end
+  -> { kind: "module", declarations: (flat d) }
+;

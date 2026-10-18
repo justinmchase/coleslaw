@@ -24,8 +24,8 @@ capitals.
 - A query returning collections MUST declare a bounded read endpoint with
   declared offset pages or cursor batches, selected nested collections, and
   opt-in filters and sorting under [queries](./queries.spec.md). The service
-  edge MUST validate those
-  bounds; a manager MUST NOT fetch an unlimited result and slice it afterwards.
+  edge MUST validate those bounds; a manager MUST NOT fetch an unlimited result
+  and slice it afterwards.
 
 ## Queries and effects
 
@@ -61,9 +61,9 @@ effect again for the same event.
 - When a reactor calls an effect, the runtime MUST make the event that caused
   the call available to the implementation, identified by its aggregate's kind
   and identity and its version. It MUST also provide the reactor's context and
-  name, the calling state, and its visit count, counting from one. Together these
-  identify one effect step, distinguishing a repeat from another call for the
-  same event.
+  name, the calling state, and its visit count, counting from one. Together
+  these identify one effect step, distinguishing a repeat from another call for
+  the same event.
 - An effect's implementation SHOULD give the same result when called again for
   the same effect step, without repeating the change, for example by passing
   that step's identification to a provider as an idempotency key.
@@ -87,9 +87,9 @@ effect again for the same event.
 
 ## Provided services
 
-A command needs the current time and new identities, and expressions cannot
-produce them. Coleslaw provides two services for them, so that they arrive
-through the same edge as every other variation.
+A command needs the current time and new identities, and pure expressions cannot
+produce them. Coleslaw provides two services for them, alongside the explicit
+creation mechanisms defined by [Types](./types.spec.md).
 
 - **Clock**: a query that returns the current instant, as a date.
 - **Identities**: a query that returns a new identity, unique among the
@@ -97,7 +97,11 @@ through the same edge as every other variation.
 - Every program MAY use the provided services without declaring them.
 - The runtime MUST implement both. An implementor MAY replace either, and a
   checker replaces both to vary what they return.
-- A program MUST NOT obtain the time or a new identity any other way.
+- A program MUST NOT obtain the time any other way. New identities MAY also be
+  obtained by explicit Type construction or runtime repository allocation at the
+  creation boundary (see [Types](./types.spec.md#construction)). These
+  mechanisms MUST NOT run within aggregate decisions or conflict retries and
+  MUST NOT grant other domain code unrestricted service access.
 
 ## Failure
 

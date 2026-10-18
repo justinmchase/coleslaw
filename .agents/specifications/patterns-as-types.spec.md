@@ -18,6 +18,15 @@ inputs and outputs, the config, a job's arguments, a message body, and a route's
 parameters.
 
 - A shape MUST be a Uffda pattern, written in Uffda's pattern syntax.
+- Examples SHOULD use idiomatic, unwrapped pattern syntax. Parentheses MAY
+  group patterns where needed for precedence, but SHOULD NOT surround every
+  field, setting, or parameter pattern. Function-call parentheses belong to
+  expression syntax and are unaffected.
+- A named [Type](./types.spec.md) MUST provide a pattern and MAY also provide
+  inspectable storage metadata and explicit construction. Any Uffda pattern
+  satisfying Coleslaw's constraints MUST remain usable directly, including for
+  persisted fields; a named Type MUST NOT be required. Storage metadata MUST NOT
+  be inferred from arbitrary patterns.
 - A shape MUST be matched against exactly one value, the way Uffda matches a
   scalar input, and MUST consume that value. A pattern that can only succeed by
   consuming more or less than one value never matches.
@@ -67,15 +76,15 @@ survive storage unchanged. Data is the set of values that can.
   JavaScript compares any other key by identity, and identity does not survive
   storage.
 - Functions, symbols, host error objects, class instances, promises, and every
-  other value not listed MUST NOT be data. Host errors are excluded because
-  what they carry, such as a stack trace, depends on the host rather than the
-  domain. A rejection's reason and an aggregate's modeled error occurrences are
-  domain data, not host errors (see [errors](./errors.spec.md)).
+  other value not listed MUST NOT be data. Host errors are excluded because what
+  they carry, such as a stack trace, depends on the host rather than the domain.
+  A rejection's reason and an aggregate's modeled error occurrences are domain
+  data, not host errors (see [errors](./errors.spec.md)).
 - The shape of a field, a command or event payload, a modeled error identity or
   details value, a projection, the config, a job's arguments, or a message body
-  MUST accept only data. A value that matches
-  such a shape's pattern but is not data MUST be refused as though the pattern
-  had failed, so `any` in these shapes means any data.
+  MUST accept only data. A value that matches such a shape's pattern but is not
+  data MUST be refused as though the pattern had failed, so `any` in these
+  shapes means any data.
 - A shape whose pattern requires a type that is never data (for example the
   `function` or `symbol` type keyword) MUST be a compile error.
 

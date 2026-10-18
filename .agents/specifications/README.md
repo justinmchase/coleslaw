@@ -7,6 +7,9 @@ statements.
 
 ## Chapters
 
+- [Application shell](./application-shell.spec.md): initial grammar, CLI,
+  settings-based selection, explicit composition, and typed host adapters.
+
 - [Overview](./overview.spec.md): what Coleslaw is for, its principles, its
   layers and what each may call, how a process starts, its modes, and how
   programs run.
@@ -27,6 +30,9 @@ statements.
     events.
 - [Patterns as types](./patterns-as-types.spec.md): shapes, closed objects, the
   values a program may store, equality, and value objects.
+- [Types](./types.spec.md): required persisted-field value contracts,
+  construction, canonicalization, inspectable storage metadata, field
+  nullability, and nominal aggregate identities with explicit allocation.
 - [Expressions](./expressions.spec.md): purity, scope, core functions, identity
   and deep equality, and failure.
 - [Services](./services.spec.md): declarations, queries and effects, the clock

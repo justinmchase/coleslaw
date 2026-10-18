@@ -283,7 +283,7 @@ the queue implementation only after their outbox record is committed.
 - Program projection reads MUST use their declared endpoints under
   [queries](./queries.spec.md). The runtime MUST validate page result bounds,
   enforce the selected mode's traversal capability, and share one read-step
-  budget across an API request's route, managers, and synchronous in-process
+  budget across a Web request's route, managers, and synchronous in-process
   reactions. Rebuilding through the state store MUST NOT expose a program
   storage-scan capability.
 

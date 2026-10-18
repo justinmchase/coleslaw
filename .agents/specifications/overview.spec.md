@@ -144,19 +144,20 @@ This follows the mode pattern of a
 one program declares every mode it can run in, and each process runs exactly one
 of them.
 
-- A program MUST declare the modes it supports, each named and of one kind, with
-  one of them the default. Its input selects one, or gets the default (see
+- A program MUST declare the modes it supports, each named and of one kind.
+  Its input selects one through a program mapping or by declaration name, or
+  gets the single declared or selector-pattern default (see
   [modes](./modes.spec.md)).
 - Coleslaw defines four kinds of mode. Others MAY be defined later.
 
   | Kind   | Runs                                                                 | Entry points |
   | ------ | -------------------------------------------------------------------- | ------------ |
-  | API    | Serves requests until stopped                                        | Controllers  |
+  | Web    | Serves requests until stopped                                        | Controllers  |
   | Worker | Handles messages from queues until stopped                           | Consumers    |
   | Job    | Runs the one job its input names, then exits with that job's outcome | Jobs         |
   | Events | Handles events from an event source until stopped                    | Reactors     |
 
-- Each mode's entry points MUST exist only in that mode: controllers only in API
+- Each mode's entry points MUST exist only in that mode: controllers only in Web
   mode, consumers only in worker mode, and jobs only in job mode.
 - Internal-event reactors run in one of two ways, and the config, not the
   program, MUST decide which. The same program MUST run either way without
