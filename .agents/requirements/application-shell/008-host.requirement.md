@@ -29,4 +29,4 @@ Expected behavior:
 Postconditions:
 
 - Execution constructs only the validated descriptors reached by the chosen mode.
-- Citing tests are added with the Rust `cslw` compiler. None are in this tree.
+- Tests: `tests/compiler.rs`.

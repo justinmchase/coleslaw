@@ -17,3 +17,12 @@ jobs:
 
       - name: Specs audit
         uses: justinmchase/specs@v1
+
+      - uses: justinmchase/uffda/.github/actions/uffda-setup@0.10.9
+        with:
+          version: 0.10.9
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Test
+        run: cargo test

@@ -1,0 +1,24 @@
+[package]
+name = "cslw"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Coleslaw compiler: parse and check .clsw programs on Uffda and Kith"
+repository = "https://github.com/justinmchase/coleslaw"
+publish = false
+
+[workspace]
+resolver = "2"
+
+[[bin]]
+name = "cslw"
+path = "src/main.rs"
+
+[dependencies]
+kith-runtime = { git = "https://github.com/justinmchase/kith", rev = "90ba224a7656e7cb61f5bbfaf5ee4ca99850dcac" }
+serde_json = { version = "1", features = ["preserve_order"] }
+uffda-runtime = { git = "https://github.com/justinmchase/uffda", rev = "61c06f3eb2dff9f9f399e110754691024b06e468", default-features = false }
+url = "2"
+
+[build-dependencies]
+uffda-build = { git = "https://github.com/justinmchase/uffda", rev = "61c06f3eb2dff9f9f399e110754691024b06e468" }

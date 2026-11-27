@@ -73,7 +73,10 @@ One operation changes at most one aggregate. Work across aggregates happens
 through reactors reacting to the events the operation's command produces, or
 through messages the operation enqueues with that command.
 
-- An operation MUST send at most one command.
+- An operation MUST send at most one command. The send MUST name a parameter
+  of the manager. That parameter is a port, the child the scene fills. The
+  send MUST NOT name the aggregate declaration as a component filter. A miss
+  on that one named child fails the send.
 - An operation MUST NOT enqueue a message unless it sends a command. Its
   messages MUST be written atomically with that command's accepted change and
   MUST NOT be enqueued when the command is rejected, conflicted, or accepted

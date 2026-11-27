@@ -4,15 +4,17 @@
 in #16 and #17. That toolchain is removed. Coleslaw is a Rust project on
 `uffda-runtime` and `kith-runtime`. It does not reimplement those libraries,
 load TypeScript from JSR, or keep a second compiler. The Rust `cslw` workspace
-is a later change, and this tree has no build until it lands. Do not follow
-the TypeScript and Deno stages below. Specifications are authoritative.
+parses and checks. `compile` and `run` wait until a program is lowered to a
+Kith scene. Do not follow the TypeScript and Deno stages below. Specifications
+are authoritative.
 
 ## Goal
 
 The retired goal was a `cslw` CLI and a modular Uffda grammar that can parse,
 check, compile, and start a small Coleslaw application. The grammar remains.
-The CLI does not. The next compiler is Rust, embeds the grammar compiled by
-the published `uffda` CLI, and links `uffda-runtime` and `kith-runtime`.
+The Rust compiler embeds that grammar, compiled by the published `uffda` CLI,
+and links `uffda-runtime` and `kith-runtime`. `parse` and `check` run.
+`compile` and `run` wait for lowering.
 
 ## Confirmed direction
 

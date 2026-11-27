@@ -135,11 +135,18 @@ capitals.
 ## CLI and artifacts
 
 - `cslw parse` MUST return a syntax AST without application construction.
-- `cslw check` MUST resolve and validate an application without starting it.
-- `cslw compile` MUST write versioned checked artifacts, with source/dependency
-  provenance sufficient to detect incompatible or stale inputs.
-- `cslw run` MUST select, validate, construct, run, and stop a declared mode.
-  Running checked artifacts MUST reject stale or incompatible artifacts.
+- `cslw check` MUST resolve and validate an application without starting host
+  drivers or running turns.
+- `cslw compile` writes a versioned artifact only after the program has been
+  lowered to a Kith scene. Until that lowering exists, `compile` MUST fail
+  with the diagnostic `lowering this program to a Kith scene is the next step`
+  and MUST NOT write an artifact or start a scene.
+- `cslw run` builds one Kith scene for the selected mode and lets Kith dispatch
+  it. Until that lowering exists, `run` of a checked program MUST fail with
+  the same diagnostic and MUST NOT dispatch a scene. An artifact whose
+  `version` is not this compiler's version MUST be rejected as an incompatible
+  artifact version. An artifact dependency marked not present MUST be rejected
+  as a stale dependency. Neither rejection executes the artifact.
 - Invalid source, imports, settings, descriptors, and execution failures MUST
   produce diagnostics and a nonzero process exit. A supported empty result
   MUST NOT be used as a fallback for unsupported behavior.

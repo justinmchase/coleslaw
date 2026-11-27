@@ -26,4 +26,4 @@ Expected behavior:
 Postconditions:
 
 - Checking MUST NOT execute component factories.
-- Citing tests are added with the Rust `cslw` compiler. None are in this tree.
+- Tests: `tests/compiler.rs`.
