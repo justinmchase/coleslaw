@@ -25,4 +25,4 @@ Expected behavior:
 Postconditions:
 
 - Resolved settings retain their shaped data types.
-- Tests: application-shell config tests under `test/`.
+- Citing tests are added with the Rust `cslw` compiler. None are in this tree.

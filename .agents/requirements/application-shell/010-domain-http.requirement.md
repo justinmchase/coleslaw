@@ -54,5 +54,6 @@ Postconditions:
 
 - Tests MUST exercise a real loopback HTTP listener with declarative source,
   successful mutation, repeat behavior, refusal, and cleanup.
+- Citing tests are added with the Rust `cslw` compiler. None are in this tree.
 - The example MUST identify memory storage as non-durable and MUST NOT claim
   production event delivery or unimplemented domain features.

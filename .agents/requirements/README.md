@@ -2,8 +2,10 @@
 
 Testable requirements derived from the chapters in
 [`../specifications/`](../specifications/README.md), one per file under a topic
-folder. Each cites the section it refines in `spec_ref`, and the tests that
-verify it cite it with `req:{id}`.
+folder. Each cites the section it refines in `spec_ref`. The citing tests are
+added with the Rust `cslw` compiler. The Deno tests that used to cite these
+requirements were removed with that toolchain, so none of these requirements
+has a test in this tree.
 
 ## Application shell
 

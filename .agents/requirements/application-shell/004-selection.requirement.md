@@ -29,4 +29,4 @@ Expected behavior:
 Postconditions:
 
 - No unselected mode or job is started.
-- Tests: application-shell selection tests under `test/`.
+- Citing tests are added with the Rust `cslw` compiler. None are in this tree.

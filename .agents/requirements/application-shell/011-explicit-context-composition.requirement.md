@@ -36,9 +36,8 @@ Expected behavior:
   access.
 - Only exported controller bindings of exported contexts MAY be reached by
   modes. Unreached context bindings MUST NOT be constructed.
-- Checking MUST NOT invoke component factories or read aggregate storage.
+- Checking MUST NOT start host drivers, run turns, or read aggregate storage.
 
 Postconditions:
 
-- Tests: context composition and boundary tests under
-  `test/domain-application.test.ts`.
+- Citing tests are added with the Rust `cslw` compiler. None are in this tree.

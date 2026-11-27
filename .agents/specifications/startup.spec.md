@@ -42,21 +42,22 @@ capitals.
 A service has a declaration, which names no technology, and implementations,
 which the implementor writes for particular technologies.
 
-- An implementation MUST be a module, imported like any other through Uffda's
-  module resolution. An implementation written in TypeScript is a module whose
-  default export declares the implementation, with a host function for each of
-  the service's operations.
-- Host code MUST appear only in service implementations and the explicitly
+- An implementation MUST be a Kith component or a Rust host driver registered
+  the way Kith's built-ins are. It is not a TypeScript module, and it is not a
+  factory invoked while checking. Checking MUST NOT start host drivers or run
+  turns. Construction happens after mode selection, and only for what that mode
+  reaches.
+- Host code MUST appear only in those implementations and the explicitly
   defined runtime/infrastructure adapters of the
   [application shell](./application-shell.spec.md#host-boundary), never domain
   expressions or aggregate/manager business logic.
 - Domain modules, those declaring aggregates, projections, managers, and
   reactors, MUST refer only to service declarations, never to implementations,
-  so the domain names no technology. Implementations MUST be imported only by
-  modules declaring modes.
-- A mode MAY import several implementations of one service. The config MUST
+  so the domain names no technology. Only a mode names which implementation a
+  process uses.
+- A mode MAY name several implementations of one service. The config MUST
   choose which one a process uses, through a built-in setting named after the
-  service; with only one imported, that one is used.
+  service; with only one named, that one is used.
 - An implementation MAY declare its own settings, such as a connection string.
   They MUST be part of the config, under the service's settings, and are checked
   only when that implementation is chosen.
@@ -65,14 +66,18 @@ which the implementor writes for particular technologies.
 - An external event source's implementation MUST be provided and chosen through
   config as the selected mode reaches it (see
   [external events](./reactors.spec.md#external-events)).
-- Coleslaw MUST provide default implementations of the services the runtime
-  itself needs, in memory where they store data, such as the state store and the
-  event source (see [runtime](./runtime.spec.md)), and an HTTP server (see
-  [controllers](./controllers.spec.md)), so a program runs locally with no
-  technology chosen.
+- Coleslaw MUST NOT implement the state store, the clock, the timer, or the
+  HTTP server. Those children are Kith's: `Store` when it exists, `Clock` and
+  `Timer` in `kith:time`, and `Server` in `kith:http`. A local run uses those
+  children. Coleslaw does not copy them into this repository (see
+  [runtime](./runtime.spec.md) and
+  [controllers](./controllers.spec.md#the-server)).
 
 ## Open questions
 
+- **Naming a host driver.** How a mode names a Kith component or a Rust host
+  driver. The name is not a TypeScript import. The spelling is not decided in
+  this chapter.
 - **Construction order and failure.** Whether services are constructed in
   parallel, and whether a service that fails to construct may be retried before
   the process stops.

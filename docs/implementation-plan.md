@@ -1,52 +1,54 @@
 # Application shell implementation plan
 
-This is an implementation proposal, not a new normative specification.
-Specifications remain authoritative. Each stage updates the relevant contract
-before adding requirements, requirement-citing tests, and implementation.
+**Retired as a build plan.** This document records the Deno slice that shipped
+in #16 and #17. That toolchain is removed. Coleslaw is a Rust project on
+`uffda-runtime` and `kith-runtime`. It does not reimplement those libraries,
+load TypeScript from JSR, or keep a second compiler. The Rust `cslw` workspace
+is a later change, and this tree has no build until it lands. Do not follow
+the TypeScript and Deno stages below. Specifications are authoritative.
 
 ## Goal
 
-Build a `cslw` CLI and a modular Uffda grammar that can parse, check, compile,
-and start a small Coleslaw application. Start with config, program, modes, and
-explicit composition; grow domain constructs through working vertical slices.
-Keep related Coleslaw work in one open PR. Upstream Uffda changes necessarily
-belong to that repository and should be coordinated as prerequisites.
+The retired goal was a `cslw` CLI and a modular Uffda grammar that can parse,
+check, compile, and start a small Coleslaw application. The grammar remains.
+The CLI does not. The next compiler is Rust, embeds the grammar compiled by
+the published `uffda` CLI, and links `uffda-runtime` and `kith-runtime`.
 
 ## Confirmed direction
 
-- Write the grammar in `.uff` files. Use Uffda's compiler, tokenizer, patterns,
-  expressions, matching, diagnostics, and resolution through public JSR APIs.
-  Add a thin Coleslaw semantic layer; do not fork or copy Uffda internals.
-- Preserve Uffda's import/export syntax, including explicit imported names.
-- Support built-in and explicitly imported mode kinds. In
-  `mode PublicApi:
-  Web`, `Web` is a resolved descriptor, not a reserved
-  grammar keyword.
-- Rename the existing API mode kind to Web. Keep its restrictions, including
-  prohibiting full traversal through managers or in-process reactors.
-- Use explicit services, repositories, managers, and controllers composition. No
-  automatic dependency injection, constructor discovery, or ambient access to
-  every component through a context object.
-- Host implementations and mode adapters may be TypeScript. Domain behavior
-  stays constrained Coleslaw; injection does not grant new domain capabilities.
+The language decisions below still hold. The toolchain sentences do not.
+
+- Write the grammar in `.uff` files. Compile it with the published `uffda`
+  CLI. Do not fork or copy Uffda internals, and do not reimplement Kith.
+- Preserve Uffda's import and export syntax, including explicit imported names.
+- Support built-in and explicitly imported mode kinds. In `mode PublicApi: Web`,
+  `Web` is a resolved descriptor, not a reserved grammar keyword.
+- The Web mode keeps the former API kind's HTTP semantics and its prohibition
+  on full traversal.
+- Use explicit services, repositories, managers, and controllers composition.
+  No automatic dependency injection, constructor discovery, or ambient access
+  to every component through a context object.
+- A host implementation is a Kith component or a Rust host driver. It is not
+  a TypeScript module. Domain behavior stays constrained Coleslaw.
 - Bind named config with nested settings, shapes, and the `secret` modifier.
   Defaults and parsing remain Uffda patterns rather than a second type system.
 - Select modes using a settings-to-mode map with short labels such as `api`,
-  `worker`, `events`, and `job`. Unmatched selection fails automatically.
+  `worker`, `events`, and `job`. Unmatched selection fails.
 - Support declared positional argument bindings to settings. A Job mode may
   contain multiple jobs but runs exactly one selected job.
-- Start with `parse`, `check`, `compile`, and `run`. Defer `fmt`, while keeping
-  the grammar and source locations suitable for adding it later.
+- Commands are `parse`, `check`, `compile`, and `run`. `fmt` stays deferred.
+- A long-running business process is an aggregate state machine. A deadline is
+  Kith's `Timer` or `send after`. Do not add a workflows chapter or a timers
+  chapter.
 
 ## Proposed syntax
 
-These sketches establish the direction; parameter declarations, binding
-spelling, and positional mappings need specification before implementation.
+These sketches established the direction. The `./infra.ts` import from the
+Deno slice is retired. The names it imported are host drivers, not files.
 
 ```text
 import "./config.clsw" Settings;
 import "./catalog/context.clsw" Catalog;
-import "./infra.ts" Logging Mongo MongoRepository;
 
 export mode PublicApi: Web {
   services {
@@ -119,27 +121,16 @@ logic.
 
 ## Stages and dependencies
 
+These stages are the retired Deno sequence. They are not instructions for the
+Rust compiler.
+
 ### 1. Establish the Uffda integration boundary
 
-Inspect the sibling Uffda repository and its specifications/tests. Verify the
-published API, not merely symbols available on local main. Published 0.9.0
-exports the grammar compiler and execution engine, but its grammar package
-exports currently offer only the tokenizer.
-
-Define and implement the smallest upstream prerequisites needed to:
-
-- import pattern, expression, import/export, and language metadata grammar
-  components through supported package exports;
-- compile and execute the Coleslaw `.uff` grammar without a copied parser;
-- parse foreign-language source to its own typed syntax tree;
-- reuse project/import-map/artifact resolution with Coleslaw file names;
-- load validated local TypeScript descriptors without treating arbitrary
-  Coleslaw nodes as Uffda runtime declarations.
-
-Test these APIs upstream, then consume only released CLI and JSR versions. Do
-not substitute an Uffda repository checkout for an unpublished dependency.
-Preserve the restriction against loading host code from grammar packages unless
-deliberately revised upstream.
+This stage consumed published TypeScript APIs from JSR, including loading
+local TypeScript descriptors. That dependency is removed. The Rust project
+links `uffda-runtime` and `kith-runtime` and compiles the grammar with the
+published `uffda` CLI. It does not load a TypeScript package, and it does not
+vendor those libraries.
 
 ### 2. Specify the application shell and composition
 
@@ -199,14 +190,14 @@ Test:
 
 Depends on stage 3, with implementation following tests incrementally.
 
-Use modular `.uff` grammar files for imports/exports, config, program, modes,
-and composition. Use TypeScript for AST types, semantic checking, artifact I/O,
-CLI orchestration, and host adapters.
+Use modular `.uff` grammar files for imports, exports, config, program, modes,
+and composition. The Deno slice used TypeScript for the AST, checking,
+artifacts, the CLI, and host factories. That implementation is removed. The
+replacement is the Rust `cslw` crate, which this document does not start.
 
-The pipeline is source -> syntax AST -> resolved, checked application IR -> mode
-selection -> reached config -> explicit construction -> execution. Parsing and
-checking must not execute imported factories or start components. Host modules
-must not construct resources at module-load time.
+The pipeline is source, then a syntax tree, then a checked program, then mode
+selection, then reached config, then construction of the Kith scene. Parsing
+and checking must not start host drivers or run turns.
 
 `parse` prints syntax; `check` validates semantics; `compile` writes checked
 artifacts; `run` executes only a selected, validated mode. Unsupported
@@ -232,8 +223,9 @@ aggregate -> manager -> controller path. Add remaining declaration kinds through
 complete slices with requirement-citing tests, not generic opaque bodies
 accepted for every keyword.
 
-Defer workflows, timers, additional operational specifications, formatting, and
-production adapters until the foundation can express and run a real app.
+A long-running business process is an aggregate state machine. A deadline is
+Kith's `Timer` or `send after`. Do not add those chapters. Leave formatting
+and production adapters until `cslw run` covers one real program.
 
 ## Review workflow
 
@@ -243,7 +235,11 @@ surfaces. The maintainer reviews and merges; do not merge automatically.
 
 ## Implementation progress
 
-The approved plan was merged in #16. Implementation continues in #17.
+This section describes the Deno slice removed from the tree. Those tests, the
+CLI, and the TypeScript host factories are gone. Do not treat the pass counts
+below as the current build.
+
+The approved plan was merged in #16. The Deno implementation landed in #17.
 
 - The public Uffda integration prerequisites are implemented in
   [justinmchase/uffda#270](https://github.com/justinmchase/uffda/pull/270). Its

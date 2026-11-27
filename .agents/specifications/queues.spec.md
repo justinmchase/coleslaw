@@ -70,7 +70,7 @@ the program relies on; it names no technology.
   state MUST yield a different identity.
 - Stable identity does not promise that a message is delivered only once.
   Consumers MUST tolerate repeated copies with that identity.
-- The sent time MUST come from the clock service (see
+- The sent time MUST come from Kith's `Clock` (see
   [provided services](./services.spec.md#provided-services)).
 - The delivery count MUST be the number of times the current queue item has
   been delivered to its consumer, including this delivery. Separate duplicate
@@ -204,9 +204,11 @@ A queue's messages have no order unless its declaration names an order group.
 - A queue implementation MUST be constructed only when the selected mode
   reaches the queue, by sending to it or running its consumer (see
   [modes](./modes.spec.md#what-a-mode-constructs)).
-- Coleslaw MUST provide an in-memory queue implementation. A checker MUST be
-  able to choose which message is delivered next, when leases expire, and which
-  messages are delivered again (see the overview's
+- Coleslaw MUST NOT implement a queue runtime. Kith's `Pipe` is one in-process
+  value and is not a Coleslaw queue. Order groups, dead letters, and
+  dispositions stay Coleslaw declarations. A checker MUST be able to choose
+  which message is delivered next, when leases expire, and which messages are
+  delivered again (see the overview's
   [checkability](./overview.spec.md#checkability)).
 
 ## Stopping
@@ -241,4 +243,5 @@ A queue's messages have no order unless its declaration names an order group.
 - **Messages with no running consumer.** Whether startup or compilation detects
   a queue whose consumer is not run by any mode.
 - **Delayed sending.** Whether a message may be enqueued to become visible only
-  after a delay, or whether that belongs to the planned `timers` chapter.
+  after a delay. The delay, when a program has one, is Kith's `send after` or
+  `Timer`. It is not a Coleslaw timers chapter.

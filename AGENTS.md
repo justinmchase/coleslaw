@@ -1,7 +1,13 @@
 # Coleslaw agent instructions
 
-Coleslaw is a constrained language for business applications, built with
-[Uffda](https://github.com/justinmchase/uffda).
+Coleslaw is a constrained language for business applications. It is a Rust
+project on [Uffda](https://github.com/justinmchase/uffda) (`uffda-runtime`) and
+[Kith](https://github.com/justinmchase/kith) (`kith-runtime`). It does not
+reimplement those libraries.
+
+Deno, JSR TypeScript packages, and TypeScript host factories are removed. Do
+not restore them, and do not add a second compiler. The `cslw` crate is a
+later step. This tree has no build until it lands.
 
 ## Specifications
 
