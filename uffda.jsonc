@@ -2,10 +2,10 @@
   // Uffda grammar packages, named the way the published uffda CLI names them.
   // This file is not a Deno or TypeScript project.
   "imports": {
-    "@justinmchase/uffda": "jsr:@justinmchase/uffda@^0.9.0"
+    "@justinmchase/uffda": "jsr:@justinmchase/uffda@^0.10.8"
   },
-  // What this project offers to others.
   "exports": {
-    ".": "./src/hello.uff"
-  }
+    ".": "./src/grammar/application.uff"
+  },
+  "outDir": "./bin"
 }

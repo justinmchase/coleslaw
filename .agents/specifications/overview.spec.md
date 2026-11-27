@@ -292,11 +292,15 @@ wherever it can.
 - Coleslaw's grammar MUST be a Uffda language, declaring the `.clsw` extension,
   so Uffda's tools can find and parse Coleslaw source.
 - Compiling a program MUST parse each source file with the embedded grammar
-  and check the domain rules. `compile` writes a versioned artifact.
+  and check the domain rules. `compile` writes a versioned artifact of a
+  lowered Kith scene. Until that lowering exists, `compile` MUST fail with a
+  diagnostic naming the step and MUST NOT write an artifact.
 - An import of one Coleslaw file from another MUST resolve to the imported
   file's declarations. Source is never parsed again when a program runs.
 - `run` MUST build one Kith scene for the selected mode and let Kith dispatch
-  it. The runtime MUST NOT interpret syntax trees on its own.
+  it. Until a program has been lowered to that scene, `run` MUST fail with a
+  diagnostic naming the step and MUST NOT dispatch. The runtime MUST NOT
+  interpret syntax trees on its own.
 - Compiled artifacts are build outputs: never edited, never committed, and
   always reproducible from the source.
 

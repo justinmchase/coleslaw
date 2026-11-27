@@ -7,9 +7,9 @@ may send.
 
 Coleslaw is a Rust project on `uffda-runtime` and `kith-runtime`. It does not
 reimplement those libraries. The published `uffda` CLI compiles the `.uff`
-grammar, and the `cslw` binary embeds that grammar. This tree does not contain
-the Rust workspace yet, so there is no build and no `cslw` command. That
-compiler is the next step. Deno, JSR TypeScript packages, and TypeScript host
+grammar, and the `cslw` binary embeds that grammar. `parse` and `check` are
+implemented. `compile` and `run` fail with a diagnostic until a program is
+lowered to a Kith scene. Deno, JSR TypeScript packages, and TypeScript host
 factories are not part of the project.
 
 ## What is in this tree
@@ -21,12 +21,11 @@ Source files use `.clsw`. Projects use [clsw.jsonc](./clsw.jsonc) and
 grammar packages the way the published `uffda` CLI names them. That import map
 is not a TypeScript dependency.
 
-When `cslw` exists, its commands are `parse`, `check`, `compile`, `run`, and
-`--version`. `fmt` stays deferred. `parse` prints a syntax tree. `check`
-resolves and checks without constructing actors. `compile` writes a versioned
-artifact. `run` builds a Kith scene and lets Kith dispatch it. Invalid input
-and runtime failure exit nonzero. Checking does not start host drivers or run
-turns.
+`cslw` commands are `parse`, `check`, `compile`, `run`, and `--version`. `fmt`
+stays deferred. `parse` prints a syntax tree. `check` resolves and checks
+without constructing actors. `compile` and `run` report that lowering the
+program to a Kith scene is the next step. Invalid input and runtime failure
+exit nonzero. Checking does not start host drivers or run turns.
 
 ## Settings and explicit composition
 

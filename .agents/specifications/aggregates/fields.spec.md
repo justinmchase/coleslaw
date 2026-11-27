@@ -12,6 +12,10 @@ capitals.
 ## Fields
 
 - A field MUST have a name, unique within its aggregate, and a Uffda pattern.
+  The checker MUST reject a second declaration of the same field. A state
+  MUST NOT declare its own copy of a field. An assignment MUST name a field
+  declared on the aggregate. A name MUST NOT be both a field and a port on
+  the same declaration.
   Any pattern satisfying Coleslaw's data and purity constraints MUST be
   supported; named Types and common patterns are conveniences, not requirements
   (see [Types](../types.spec.md#patterns-in-field-declarations)).
