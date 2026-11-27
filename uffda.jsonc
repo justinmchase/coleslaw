@@ -1,5 +1,6 @@
 {
-  // Module names for packages. Each one maps to a jsr: specifier.
+  // Uffda grammar packages, named the way the published uffda CLI names them.
+  // This file is not a Deno or TypeScript project.
   "imports": {
     "@justinmchase/uffda": "jsr:@justinmchase/uffda@^0.9.0"
   },

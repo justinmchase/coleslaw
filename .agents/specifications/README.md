@@ -11,7 +11,7 @@ statements.
   settings-based selection, explicit composition, and typed host adapters.
 
 - [Overview](./overview.spec.md): what Coleslaw is for, its principles, its
-  layers and what each may call, how a process starts, its modes, and how
+  layers and what each may cause, how a process starts, its modes, and how
   programs run.
 - [Glossary](./glossary.spec.md): the vocabulary every other chapter, and the
   language's keywords, use.
@@ -33,10 +33,10 @@ statements.
 - [Types](./types.spec.md): required persisted-field value contracts,
   construction, canonicalization, inspectable storage metadata, field
   nullability, and nominal aggregate identities with explicit allocation.
-- [Expressions](./expressions.spec.md): purity, scope, core functions, identity
-  and deep equality, and failure.
-- [Services](./services.spec.md): declarations, queries and effects, the clock
-  and identity services, and failure.
+- [Expressions](./expressions.spec.md): purity, scope, Uffda expression globals,
+  identity and deep equality, and failure.
+- [Services](./services.spec.md): declarations, queries and effects, and
+  failure. Time, identities, and seeded randomness are Kith edges.
 - [Managers](./managers.spec.md): operations, their state machines, the one
   command, and results.
 - [Reactors](./reactors.spec.md): reactions to internal and external events,
@@ -65,6 +65,19 @@ statements.
   offset pages, nested results, declared filtering and sorting, cursor
   iteration, and traversal capabilities of modes.
 
+## Not chapters
+
+- A long-running business process is an aggregate state machine. Coleslaw does
+  not specify a workflows chapter. Kith removed workflows, and Coleslaw does
+  not restore that runtime, a flow graph, or a `run` primitive.
+- A deadline is Kith's `Timer`, or one `send after` on the dispatcher clock.
+  `Timer(interval: Milliseconds)` takes a positive number of milliseconds, such
+  as `Timer(interval: 1500)`. It arms a delay, sends `@Tick` up, and rearms the
+  same interval. `send after` is a one-shot delay in seconds. Recurrence that
+  is not `Timer` is the handler sending again. Coleslaw may name a deadline in
+  domain words. It does not specify a timers chapter or a second scheduling
+  mechanism. There is no `every`, `sleep`, or `setTimeout`.
+
 ## Planned chapters
 
 These are not written yet. They are listed so that new chapters fit the intended
@@ -76,14 +89,6 @@ Patterns common enough to every application that Coleslaw makes them constructs,
 so the language can constrain them, as it does state machines, managers, and
 services.
 
-- `workflows`: long-running entities that are state machines the runtime
-  advances, not user code, until they reach a final state. Each has a progress:
-  a tree of branches and leaves as work fans out and back in, rolled up into
-  completed and total counts, plus progress content the program reports. Any
-  caller can learn a workflow's state.
-- `timers`: deadlines and commands scheduled for later, such as escalating an
-  approval not decided within three days. Time comes from the clock service, so
-  a checker controls it.
 - `tenancy`: every aggregate, projection, and query scoped to a tenant, enforced
   by the language rather than by remembering a filter.
 - `problems`: one standard response format, such as RFC 9457 problem details,

@@ -27,4 +27,4 @@ Expected behavior:
 Postconditions:
 
 - A checked graph contains only supported, explicitly validated dependency edges.
-- Tests: application-shell composition tests under `test/`.
+- Citing tests are added with the Rust `cslw` compiler. None are in this tree.

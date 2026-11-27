@@ -1,8 +1,8 @@
 # Expressions
 
 This chapter defines Coleslaw's expressions: the language they are written in,
-what they may refer to, the core functions they may call, how they compare
-values, and what happens when one fails. Terms are defined in the
+what they may refer to, the Uffda expression globals they may call, how they
+compare values, and what happens when one fails. Terms are defined in the
 [glossary](./glossary.spec.md).
 
 ## Conventions
@@ -44,7 +44,7 @@ commands and enqueue messages; and managers and reactors call services.
     (for example, a command handler gives the command and the machine state);
   - variables captured by the patterns of its declaration;
   - the funcs and reusable pattern rules the module declares or imports;
-  - the core functions.
+  - Uffda's expression globals.
 - A name that refers to none of these MUST be a compile error. Because every
   scope is known when a program is compiled, an unresolved name never reaches
   the runtime.
@@ -56,17 +56,25 @@ commands and enqueue messages; and managers and reactors call services.
   [modes](./modes.spec.md#declaring-modes). This capability binding MUST NOT
   expose parser internals or become domain data usable in payload projections.
 
-## Core functions
+## Expression globals
 
-The functions every expression may call are the runtime's globals. Coleslaw
-provides its own set, rather than inheriting Uffda's.
+The functions every expression may call are Uffda's expression globals.
+Coleslaw does not define a private core library and does not ship a private
+evaluator.
 
-- Coleslaw MUST define its core functions. It MAY include functions Uffda
-  defines, under their Uffda names, when they meet this section's rules.
-- Every core function MUST be pure, deterministic, and general purpose.
-- A program MUST NOT add core functions. A capability the core functions lack
-  comes from a service, or is written as a func.
-- The core functions MUST include `eq` and `deep` (see [equality](#equality)).
+- Coleslaw MUST evaluate expressions with `uffda-runtime`. It MUST NOT define
+  its own function catalogue, and it MUST NOT add a second `deep`.
+- Every expression global MUST be pure, deterministic, and general purpose.
+  The globals a program may call include `eq`, `add`, `sub`, `length`,
+  `when`, and `not`. `eq` is strict equality.
+- A program MUST NOT add expression globals. A capability those globals lack
+  comes from a Kith child, or is written as a func.
+- `(deep x y)` is data equality (see [equality](#equality)). It is an Uffda
+  global. Until Uffda provides `deep`, Coleslaw MUST NOT substitute one.
+- Random draws and new identities are not expression globals. `(rand Lo Hi)`
+  and `Crypto` are Kith. The seeded `Random` component and the `id` function
+  are Kith's to add. An expression MUST NOT draw a random value or mint an
+  identity.
 
 ## Equality
 
@@ -83,8 +91,8 @@ it deeply, part by part, and names what failed when it does not match.
   compare two objects by value, a pattern matches their parts, as
   `{ currency: $currency, amount: $amount }` does against primitives in scope,
   or an expression uses `deep`.
-- `(eq x y)` MUST be identity: true when `x` and `y` are the same primitive
-  value, as JavaScript's `===` decides, or the same object.
+- `(eq x y)` MUST be strict equality, the same decision Uffda's `eq` makes:
+  true when `x` and `y` are the same primitive value or the same object.
 - `(deep x y)` MUST be data equality: true when `x` and `y` are equal as
   [patterns as types](./patterns-as-types.spec.md#equality) defines.
 - Because materialized data never shares an object between two places (see
@@ -114,8 +122,8 @@ it deeply, part by part, and names what failed when it does not match.
 
 ## Failure
 
-An expression can fail: a core function given an argument it does not accept or
-a func whose argument pattern does not match. Missing members themselves
+An expression can fail: an expression global given an argument it does not
+accept, or a func whose argument pattern does not match. Missing members themselves
 propagate absence under [member access](#member-access).
 
 - A failed expression is a defect in the program, never a business outcome. It
@@ -139,5 +147,5 @@ propagate absence under [member access](#member-access).
 
 - **Termination.** Funcs may call themselves, so an expression may never finish.
   Whether evaluation is bounded, and how the bound is chosen and reported.
-- **The catalogue of core functions.** Which functions the core set holds beyond
-  `eq` and `deep`, and how a function is added to it.
+- **`deep`.** Uffda does not yet provide the data-equality global. Coleslaw
+  waits for that global and does not add a private one.

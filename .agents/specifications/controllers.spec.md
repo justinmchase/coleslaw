@@ -323,8 +323,8 @@ The server that accepts connections and speaks HTTP is not part of the program.
   aggregate state storage is: never declared or called by the program, and
   implemented for a technology the config chooses (see
   [startup](./startup.spec.md#services)).
-- Coleslaw MUST provide an implementation of the server, so a Web mode runs
-  with no technology chosen.
+- The server is Kith's `Server` in `kith:http`. Coleslaw MUST NOT implement an
+  HTTP stack. A Web mode runs on that child, with no technology chosen.
 - What a server needs to listen, such as an address and a port, MUST be settings
   of its implementation, part of the config under the server's settings.
 - A checker or a test MAY replace the server with an implementation that

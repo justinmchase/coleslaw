@@ -49,8 +49,9 @@ capitals.
   side effects.
 - **Func**: a named expression declared in a module, with a pattern its
   arguments must match.
-- **Core function**: a function Coleslaw provides to every expression, such as
-  `eq` or `deep`. Core functions are pure, and a program cannot add to them.
+- **Expression global**: a pure function Uffda provides to every expression,
+  such as `eq`. Coleslaw does not define its own set, and a program cannot add
+  to Uffda's. `deep` is the data-equality global, added in Uffda, not here.
 
 ## Domain
 
@@ -171,8 +172,9 @@ capitals.
   exits with that job's outcome.
 - **Events mode**: a mode of the kind that handles events from an event source,
   such as a Kafka topic, through reactors until stopped.
-- **Implementation**: a module that implements a service declaration for a
-  particular technology. The config chooses which implementation a process uses.
+- **Implementation**: a Kith component or a Rust host driver that implements a
+  service declaration for a particular technology. The config chooses which
+  implementation a process uses. It is not a TypeScript module.
 - **Application**: what startup constructs from the config for one mode: the
   services, managers, and entry points that mode reaches. The program is the
   source; an application is one running instance of it.
@@ -194,11 +196,14 @@ capitals.
 - **Event source**: an implementation that supplies internal or external events
   to reactors in events mode. Internal events are accepted from processes that
   save them; external events are supplied by another application's source.
-- **Runtime service**: a service Coleslaw declares for the runtime's own needs,
-  such as the state store and the event source. Only the runtime calls it; the
-  config chooses its implementation, and Coleslaw provides one in memory.
-- **State store**: the runtime service that keeps aggregates' stored states and
-  the event and message records saved with them until they are relayed.
+- **Runtime service**: a capability only the runtime uses, such as the state
+  store and the event source. The program does not call it. Its implementation
+  is a Kith child, not a library Coleslaw ships. The config chooses which
+  implementation a process uses when more than one is registered.
+- **State store**: the child that keeps aggregates' stored states and the event
+  and message records saved with them until they are relayed. It is Kith's
+  `Store`. Coleslaw does not implement a document store, and it does not keep
+  an event log as the source of truth.
 - **Outbox**: pending event and message records committed in the state store,
   which the runtime relays after commit. Manager messages are saved atomically
   with a command's state and events; reactor messages are appended durably by

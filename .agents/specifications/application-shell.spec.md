@@ -115,21 +115,22 @@ capitals.
 
 ## Host boundary
 
-- Local TypeScript modules MAY provide typed host descriptors for service
-  implementations, runtime repositories, infrastructure capabilities, and
-  mode-kind adapters. Descriptors MUST declare their kind and parameter
-  contract; malformed descriptors MUST be rejected.
-- Host implementations MUST be loaded through explicit imports or the runtime's
-  built-in registry. Built-in and imported components MUST follow the same
-  capability validation; imports MUST NOT silently shadow built-in kinds.
-- Host modules MUST NOT construct resources or start work at module-load time.
-  Checking MAY load descriptor metadata but MUST NOT invoke factories.
-  Construction MUST happen only after selection and reached config validation.
-- This host extension MUST NOT permit native Uffda expressions or TypeScript
-  aggregate/manager business logic. HTTP and storage technologies stay behind
-  runtime adapters.
-- Package host-code restrictions MUST follow Uffda. Supporting trusted local
-  TypeScript MUST NOT imply permission to execute host code from grammar packages.
+- A service implementation, runtime repository, infrastructure capability, or
+  mode-kind adapter MUST be a Kith component or a Rust host driver registered
+  the way Kith's built-ins are. It MUST NOT be a TypeScript module or a host
+  factory. Descriptors MUST declare their kind and parameter contract;
+  malformed descriptors MUST be rejected.
+- Host implementations MUST be registered through the runtime's built-in
+  registry or named by the program the way other components are. Built-in and
+  registered components MUST follow the same capability validation; a
+  registration MUST NOT silently shadow a built-in kind.
+- Checking MUST NOT start host drivers or run turns. Construction happens
+  after mode selection and reached config validation, and only for what that
+  mode reaches.
+- This host boundary MUST NOT permit native Uffda expressions or host-written
+  aggregate and manager business logic. HTTP and storage stay behind Kith
+  children: `Server` in `kith:http`, and `Store` when Kith provides it.
+- Grammar packages MUST NOT gain permission to execute host code.
 
 ## CLI and artifacts
 
@@ -147,11 +148,16 @@ capitals.
 
 ## Delivery scope
 
-- Local development and CI MUST use a released Uffda CLI and published JSR
-  integration APIs. They MUST NOT load or build an Uffda repository checkout
-  as a dependency. Missing released APIs MUST be reported as a dependency
-  blocker rather than substituted with repository source.
-- A shell demonstration MAY use a clearly labeled test mode adapter. It MUST
-  NOT be presented as a complete domain runtime or production Web server.
+- Coleslaw is a Rust project on `uffda-runtime` and `kith-runtime`, as
+  [the overview](./overview.spec.md#project) states. It MUST NOT depend on
+  Deno, a JSR TypeScript package, or a second compiler.
+- Grammar compilation MUST use the published `uffda` CLI. The `cslw` binary
+  embeds that grammar and links the two crates. It MUST NOT reimplement those
+  libraries, vendor them, or shell out to `uffda` to parse a `.clsw` file.
+- Missing library behavior MUST be added in Uffda or Kith. It MUST NOT be
+  copied into this repository or papered over with a private evaluator.
+- A shell demonstration MAY name a host job that is a Kith component or a Rust
+  host driver. It MUST NOT be a TypeScript factory, and it MUST NOT be
+  presented as a complete domain runtime or production Web server.
 - Domain behavior SHOULD expand through complete, requirement-citing tested
   slices, rather than placeholder syntax for every future declaration.

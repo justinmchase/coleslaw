@@ -27,4 +27,4 @@ Expected behavior:
 Postconditions:
 
 - Startup cannot report success after a construction or cleanup failure.
-- Tests: application-shell lifecycle tests under `test/`.
+- Citing tests are added with the Rust `cslw` compiler. None are in this tree.

@@ -1,7 +1,7 @@
 # Overview
 
 This chapter states what Coleslaw is for, the principles every other chapter
-follows, the layers a program is made of and what each may call, and how
+follows, the layers a program is made of and what each may cause, and how
 programs run. Terms are defined in the [glossary](./glossary.spec.md).
 
 ## Conventions
@@ -17,11 +17,26 @@ line-of-business systems whose value lies in their domain rules rather than in
 their infrastructure. A Coleslaw program declares a domain (its aggregates),
 the business operations over it (its managers), the ways the outside world
 reaches it (its controllers, consumers, and jobs), its internal queues and
-reactions to events, its configuration, and the modes it can run in. The
-Coleslaw runtime executes that program in one mode per process.
+reactions to events, its configuration, and the modes it can run in. One
+process runs that program in one mode, as a Kith scene.
 
 Coleslaw is built with Uffda: its grammar is a Uffda language, and it uses Uffda
 patterns as its types and Uffda expressions as its expression language.
+
+## Project
+
+Coleslaw is a Rust project. Its compiler and checker depend on `uffda-runtime`
+and `kith-runtime`. Uffda supplies the grammar engine, patterns, expressions,
+and matching. Kith supplies components, scenes, and message dispatch.
+
+- Coleslaw MUST NOT reimplement, vendor, or replace those libraries.
+- The published `uffda` CLI MUST compile the `.uff` grammar. The `cslw` binary
+  MUST embed that compiled grammar. It MUST NOT shell out to `uffda` to parse
+  a `.clsw` file.
+- Coleslaw MUST NOT depend on Deno, load a TypeScript package, or use a
+  TypeScript module as a host factory. It MUST NOT keep a second compiler.
+- A service implementation MUST be a Kith component or a Rust host driver
+  registered the way Kith's built-ins are.
 
 ## Principles
 
@@ -71,6 +86,10 @@ patterns as its types and Uffda expressions as its expression language.
 | Service    | A declared capability whose implementation the host program provides | Nothing in the program                               |
 
 ## Dependency rules
+
+These rules say who may cause what. Each allowed step is a message send on the
+Kith scene (see [execution](#execution-model)). A direct call is not a second
+way to cause behavior.
 
 - Controllers, consumers, and jobs MUST change the domain only through managers.
   They MUST NOT send commands to aggregates or call services directly.
@@ -206,8 +225,9 @@ message broker.
   declared service, configured from the program's config.
 - Values crossing a service boundary MUST match the patterns the declaration
   gives, in both directions.
-- The [services](./services.spec.md) chapter defines declarations, queries and
-  effects, and the clock and identity services Coleslaw provides.
+- The [services](./services.spec.md) chapter defines declarations, queries, and
+  effects. Time, new identities, and seeded randomness are Kith edges, not
+  services Coleslaw provides.
 
 ## Reference applications
 
@@ -250,9 +270,11 @@ does not use them, and it may use different technologies.
 
 ## Execution model
 
-- Coleslaw programs are interpreted: the runtime, built on the Uffda runtime,
-  interprets compiled syntax trees. Coleslaw does not generate code. The
-  [runtime](./runtime.spec.md) chapter makes the rest of this section precise.
+- A Coleslaw program runs as one exported Kith scene. Coleslaw checks the
+  domain rules and hands Kith that scene. Kith constructs it and dispatches
+  its messages. Coleslaw does not interpret messages, schedule actors, or
+  generate code. The [runtime](./runtime.spec.md) chapter states the domain
+  rules that scene carries out.
 - Aggregates are stored as state, not as event histories. An aggregate's stored
   state, with its version, is the source of truth for it. Every change to that
   state is described by an event, which is delivered to what observes it.
@@ -269,15 +291,13 @@ wherever it can.
   already claimed by LaTeX classes, VBA class modules, and Apex classes.)
 - Coleslaw's grammar MUST be a Uffda language, declaring the `.clsw` extension,
   so Uffda's tools can find and parse Coleslaw source.
-- Compiling a program MUST parse each source file with that grammar and write
-  its syntax tree as JSON to the project's output directory (`./bin` by
-  default), at the path Uffda's artifact layout gives it.
-- An import of one Coleslaw file from another MUST resolve, through Uffda's
-  module resolution, to the imported file's compiled syntax tree. Source is
-  never parsed when a program runs.
-- The runtime MUST run only compiled syntax trees, interpreting them according
-  to the selected mode.
-- Compiled syntax trees are build outputs: never edited, never committed, and
+- Compiling a program MUST parse each source file with the embedded grammar
+  and check the domain rules. `compile` writes a versioned artifact.
+- An import of one Coleslaw file from another MUST resolve to the imported
+  file's declarations. Source is never parsed again when a program runs.
+- `run` MUST build one Kith scene for the selected mode and let Kith dispatch
+  it. The runtime MUST NOT interpret syntax trees on its own.
+- Compiled artifacts are build outputs: never edited, never committed, and
   always reproducible from the source.
 
 ## Checkability
@@ -295,10 +315,15 @@ checker itself will come later; the language MUST stay checkable now.
   including repeats.
 - Everything else MUST be deterministic, so that a run is reproduced exactly by
   replaying the same choices at those edges.
-- A feature that would hide a source of variation inside the program, such as
-  reading the clock or generating an identity other than through a service, MUST
-  NOT be added. The time and new identities come from services Coleslaw
-  provides, which a checker can replace.
+- A feature that would hide a source of variation inside the program MUST NOT
+  be added. An expression MUST NOT read the wall. An aggregate handler MUST
+  NOT mint an identity.
+- The current time comes from Kith's `Clock`. A new identity comes from Kith's
+  `id`, called where the program needs one. Seeded randomness is Kith's
+  `Random` component. `(rand Lo Hi)` and `Crypto` stay Kith's existing draws.
+  A checker replaces `Clock` and `Random`. Coleslaw does not provide its own
+  clock, identity service, or random service, and it does not add a substitute
+  while Kith has not published `id`, `Random`, or `Store`.
 
 ## Uffda prerequisites
 
@@ -313,9 +338,9 @@ Uffda, specified there, before the Coleslaw chapters that depend on them:
   language with that language's grammar, and write that language's syntax tree.
 - **Resolving other languages.** Uffda's module resolution rejects file
   extensions other than its own today. It MUST be able to resolve an import of a
-  project language's source file to that file's compiled syntax tree, and a
-  TypeScript module whose default export declares that language's declarations,
-  such as a service implementation (see [startup](./startup.spec.md#services)).
+  project language's source file to that file's declarations. A service
+  implementation is not a module Uffda resolves. It is a Kith component or a
+  Rust host driver (see [startup](./startup.spec.md#services)).
 - **Packages of other languages.** A Uffda package supplies only `.uff` modules
   today. It MUST be able to supply a project language's compiled modules, so a
   package can export Coleslaw contexts (see

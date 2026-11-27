@@ -34,4 +34,4 @@ Expected behavior:
 
 Postconditions:
 
-- Tests: `test/domain.test.ts` and end-to-end domain tests when integrated.
+- Citing tests are added with the Rust `cslw` compiler. None are in this tree.

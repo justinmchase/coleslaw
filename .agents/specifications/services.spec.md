@@ -2,8 +2,9 @@
 
 This chapter defines services: the capabilities a program declares and the
 implementor provides. It covers declaring a service, the two kinds of operation,
-who may call each, the services Coleslaw provides itself, and what happens when
-an operation fails. Terms are defined in the [glossary](./glossary.spec.md).
+who may call each, and what happens when an operation fails. Time, new
+identities, and seeded randomness are Kith edges, not services this chapter
+provides. Terms are defined in the [glossary](./glossary.spec.md).
 
 ## Conventions
 
@@ -74,8 +75,9 @@ effect again for the same event.
   service, for any technology, configured from the program's config.
 - Which implementation a process uses MUST be chosen by its config, so the same
   program can use, for example, an in-memory implementation locally and a
-  database in production. Implementations are modules, imported where modes are
-  declared (see [startup](./startup.spec.md#services)).
+  database in production. A mode names the implementations it may use. The
+  spelling of that name is a Kith child or a registered Rust host driver, not
+  a TypeScript import (see [startup](./startup.spec.md#services)).
 - A service MUST be constructed only when the selected mode reaches it (see the
   overview's [modes](./overview.spec.md#modes)).
 - Values crossing a service boundary MUST match the operation's shapes, in both
@@ -87,21 +89,27 @@ effect again for the same event.
 
 ## Provided services
 
-A command needs the current time and new identities, and pure expressions cannot
-produce them. Coleslaw provides two services for them, alongside the explicit
-creation mechanisms defined by [Types](./types.spec.md).
+A command needs the current time and, where it asks for one, a new identity.
+Pure expressions cannot produce either. Coleslaw does not provide a clock, an
+identity service, or a random service, and it does not reimplement Kith's.
 
-- **Clock**: a query that returns the current instant, as a date.
-- **Identities**: a query that returns a new identity, unique among the
-  identities it has returned.
-- Every program MAY use the provided services without declaring them.
-- The runtime MUST implement both. An implementor MAY replace either, and a
-  checker replaces both to vary what they return.
-- A program MUST NOT obtain the time any other way. New identities MAY also be
-  obtained by explicit Type construction or runtime repository allocation at the
-  creation boundary (see [Types](./types.spec.md#construction)). These
-  mechanisms MUST NOT run within aggregate decisions or conflict retries and
-  MUST NOT grant other domain code unrestricted service access.
+- **Clock.** The current time is Kith's `Clock` in `kith:time`. `"Now"` replies
+  with an instant. `"Zone"` replies with the frozen process zone. A command
+  receives time from that child. A checker scripts the replies. A program MUST
+  NOT obtain the time any other way. There is no second clock and no wall read
+  inside an expression.
+- **Identity.** A new identity is Kith's `id` function, called where the
+  command needs one. An aggregate MUST NOT mint one inside its handler. New
+  identities MAY also be obtained by explicit Type construction or runtime
+  repository allocation at the creation boundary (see
+  [Types](./types.spec.md#construction)). These mechanisms MUST NOT run within
+  aggregate decisions or conflict retries and MUST NOT grant other domain code
+  unrestricted service access.
+- **Random.** Seeded randomness is Kith's `Random` component, which a checker
+  can fix. `Crypto` stays the `"Random" n` byte reply. `(rand Lo Hi)` stays
+  Kith's range draw. Coleslaw MUST NOT reimplement any of them.
+- **Timer.** A deadline is Kith's `Timer` or one `send after`. Coleslaw does
+  not define a second timer. See the [index](./README.md#not-chapters).
 
 ## Failure
 
@@ -121,8 +129,6 @@ match its shape.
 
 ## Open questions
 
-- **Identity format.** What the provided identity service returns: a string in
-  one standard format, or a shape the program chooses.
 - **Streams and long results.** Whether a query may return a sequence too long
   to hold at once, such as every record in a table, and how a manager consumes
   it.

@@ -5,8 +5,10 @@ and queued messages: how it stores aggregate state, handles commands, retries
 conflicts, records events and outbox messages, and delivers them. It consolidates
 what the [aggregates](./aggregates.spec.md), [reactors](./reactors.spec.md),
 [services](./services.spec.md), and [startup](./startup.spec.md) chapters
-promise about the runtime, and makes it precise. Terms are defined in the
-[glossary](./glossary.spec.md).
+promise about the runtime, and makes it precise. Kith is that runtime.
+Coleslaw checks these rules and hands Kith a scene. It does not interpret the
+scene, and it does not implement a second store, clock, or timer. Terms are
+defined in the [glossary](./glossary.spec.md).
 
 ## Conventions
 
@@ -155,7 +157,7 @@ makes within one invocation. Relay and delivery are at least once.
 - An event's version MUST be the aggregate's version once that event has been
   evolved, so the events of one Save have consecutive versions ending at the new
   version.
-- The recorded time MUST come from the clock service (see
+- The recorded time MUST come from Kith's `Clock` (see
   [provided services](./services.spec.md#provided-services)), read once per
   attempt and shared by every event that attempt records.
 - An event is identified by its aggregate's kind and identity and its version.
@@ -328,9 +330,11 @@ no technology for them and the config chooses their implementations.
     [external events](./reactors.spec.md#external-events)).
 - Only the runtime MAY call a runtime service's operations. No declaration in a
   program MAY call them.
-- Coleslaw MUST provide an in-memory implementation of each runtime service, so
-  a program runs locally, in one process, with no technology chosen (see
-  [startup](./startup.spec.md#services)).
+- Coleslaw MUST NOT implement those runtime services. The state store is
+  Kith's `Store`. The clock and the only timer are Kith's `Clock` and `Timer`.
+  A local run uses those children, in one process, with no technology chosen
+  (see [startup](./startup.spec.md#services)). Until `Store` exists, Coleslaw
+  does not ship a stand-in document store.
 - Which implementation a process uses MUST be chosen by its config, as for any
   service, so the same program runs in memory locally and on a database and a
   broker in production.
@@ -355,7 +359,7 @@ checker can choose (see the overview's
   - how attempts on the same aggregate interleave, where each attempt's Load and
     Save are separate points, so a checker chooses which saves fall between them
     and so whether a Save conflicts;
-  - what each service returns, including the clock, identities, and the runtime
+  - what each service returns, including Kith's `Clock`, `id`, and the runtime
     services;
   - which pending record is delivered next to which destination, whether a
     delivered record is delivered again, whether a relay accepts duplicate
@@ -365,8 +369,9 @@ checker can choose (see the overview's
 - Everything else the runtime does MUST be deterministic: given the same choices
   at those edges, a run MUST take the same path and give the same outcomes,
   versions, records, and shard keys.
-- The in-memory implementations MUST let a checker make these choices, or be
-  replaceable by implementations that do.
+- Kith's in-memory children MUST let a checker make these choices, or be
+  replaceable by implementations that do. Coleslaw does not ship a second copy
+  of those children.
 
 ## Open questions
 

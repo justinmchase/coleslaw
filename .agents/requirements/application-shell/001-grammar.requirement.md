@@ -29,4 +29,4 @@ Expected behavior:
 Postconditions:
 
 - Parsing constructs no application resources.
-- Tests: application-shell grammar tests under `test/`.
+- Citing tests are added with the Rust `cslw` compiler. None are in this tree.
